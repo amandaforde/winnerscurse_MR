@@ -126,7 +126,7 @@ The aim is now to obtain the covariance of these regression coefficients for eac
 $${\bf \hat \beta_Y} = (\bf{G_Y}^T\bf{G_Y})^{-1}\bf{G_Y}^T\bf{Y}$$
 
 It can be easily shown that $N_X({\bf G_X}^T{\bf G_X})^{-1} \sim N_Y(\bf{G_Y}^T\bf{G_Y})^{-1}$ as: $$({\bf G_X}^T{\bf G_X})^{-1} \sim \frac{1}{N_X} \begin{pmatrix} 1 & 2\text{maf}_i \\  2\text{maf}_i &  4\text{maf}_i^2 + 2\text{maf}_i(1-\text{maf}_i)  \end{pmatrix} ^{-1} \text{and } ({\bf G_Y}^T{\bf G_Y})^{-1} \sim \frac{1}{N_Y} \begin{pmatrix} 1 & 2\text{maf}_i \\  2\text{maf}_i &  4\text{maf}_i^2 + 2\text{maf}_i(1-\text{maf}_i)  \end{pmatrix} ^{-1}.$$ 
-Therefore, letting ${\bf C} \sim N_X(\bf{G_X}^T\bf{G_X})^{-1}$ and ${\bf C} \sim N_Y(\bf{G_Y}^T\bf{G_Y})^{-1}$, it follows that: $${\bf \textbf{cov}(\hat\beta_X, \hat\beta_Y)} \sim \textbf{cov}\left(\frac{\bf{C}}{N_X}{\bf G_X^T}{\bf X}, \frac{{\bf C}}{N_Y}{\bf G_Y^T}{\bf Y}\right) = \frac{1}{N_X N_Y} \textbf{cov}\left({\bf C} {\bf G}_{\text{overlap}}^T {\bf X}_{\text{overlap}}, {\bf C} {\bf G}_{\text{overlap}}^T {\bf Y}_{\text{overlap}}\right)$$ giving $${\bf \textbf{cov}(\hat\beta_X, \hat\beta_Y)} \sim \frac{{\bf C} {\bf G}_{\text{overlap}}^T \text{cov}( {\bf X}_{\text{overlap}},  {\bf Y}_{\text{overlap}}) {\bf G}_{\text{overlap} }{\bf C}^T }{N_X N_Y}$$
+Therefore, letting ${\bf C} \sim N_X(\bf{G_X}^T\bf{G_X})^{-1}$ and ${\bf C} \sim N_Y(\bf{G_Y}^T\bf{G_Y})^{-1}$, it follows that: $${\bf \textbf{cov}(\hat\beta_X, \hat\beta_Y)} \sim \textbf{cov}\left(\frac{\bf{C}}{N_X}{\bf G_X^T}{\bf X}, \frac{\bf C}{N_Y}{\bf G_Y^T}{\bf Y}\right) = \frac{1}{N_X N_Y} \textbf{cov}\left({\bf C} {\bf G}_{\text{overlap}}^T {\bf X}_{\text{overlap}}, {\bf C} {\bf G}_{\text{overlap}}^T {\bf Y}_{\text{overlap}}\right)$$ giving $${\bf \textbf{cov}(\hat\beta_X, \hat\beta_Y)} \sim \frac{\bf C {\bf G}_{\text{overlap}}^T \text{cov}( {\bf X}_{\text{overlap}},  {\bf Y}_{\text{overlap}}) {\bf G}_{\text{overlap} }{\bf C}^T }{N_X N_Y}$$
 
 Here, ${\bf X}_{\text{overlap}}$ and ${\bf Y}_{\text{overlap}}$ denote the first $N_{\text{overlap}}$ elements of $\bf X$ and $\bf Y$. Noting that $\textbf{cov}( {\bf X}_{\text{overlap}},  {\bf Y}_{\text{overlap}}) = \text{cov}(X,Y) {\bf I}_{N_\text{overlap}}$, where ${\bf I}_{N_\text{overlap}}$ is the ${N_\text{overlap}} \times {N_\text{overlap}}$ identity matrix, ${{\bf G}_{\text{overlap}}}^T{{\bf G}_{\text{overlap}}} \sim N_\text{overlap}{\bf C}^{-1}$ and ${\bf C} = {\bf C}^T$, it follows that: $${\bf \textbf{cov}(\hat\beta_X, \hat\beta_Y)} \sim \frac{N_{\text{overlap}}\text{cov}(X,Y)}{N_XN_Y} {\bf C}$$
 
@@ -953,7 +953,6 @@ ggplot(data_flip, aes(x=beta.exposure, y=beta.outcome)) + geom_point() + geom_ab
 <span style="color: #C21B1E;">**Question:** ***Does our approach introduce more weak instrument bias?***</span>
 
 
-
 ```{r}
 ## Extra functions to also calculate Isq statisitic on each iteration
 Isq <- function(y,s){
@@ -1030,9 +1029,6 @@ set.seed(1998)
 results_Isq <- prss_res_Isq(ss,mr_method="mr_egger_regression")
 
 ```
-
-
-
 
 
 
