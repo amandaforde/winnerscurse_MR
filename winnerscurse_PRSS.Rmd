@@ -142,7 +142,7 @@ iii) ${\bf \sum_X} =  \begin{pmatrix} \text{var}\left(\hat \beta_{X1}\right) & \
 
 <br>
 
-#### <span style="color: purple;">**$\star \; E(\hat\beta_{X1_\pi})$, $\text{var}(\hat\beta_{X1_\pi})$ and $\text{cov}(\hat\beta_{X1_\pi}, \hat\beta_{X1})$:**</span>
+<span style="color: purple;">**$\star \; E(\hat\beta_{X1_\pi})$, $\text{var}(\hat\beta_{X1_\pi})$ and $\text{cov}(\hat\beta_{X1_\pi}, \hat\beta_{X1})$:**</span>
 
 Now, suppose we split the full data set into two fractions $\pi$ and $1-\pi$. Thus, in the first fraction (sub sample), we would have ***approximately*** $\pi N_X$ individuals who have an exposure measurement, $\pi N_Y$ who have had their outcome measured and $\pi N_{\text{overlap}}$ individuals who have values available for both exposure and outcome. We can write the genotype matrix of those that have had their exposure measured in this first sub sample, denoted by $G_{X\pi}$, as: $$\bf G_{X\pi} = \begin{pmatrix} \bf G_{\text{overlap}{\pi}} \\ \bf G_{X_1\pi} \end{pmatrix}$$
 
@@ -345,15 +345,19 @@ wc_debias <- function(data,pi=0.5,mr_method="mr_ivw", threshold=5e-8){
       eaf.outcome = data$maf,
       mr_keep=TRUE
     )
-
-    results <- data %>%
-      TwoSampleMR::mr(.,method_list=mr_method)
-    return(results[,5:9])
+    
+    if(mr_method != "mr_raps"){
+      results <- data %>% TwoSampleMR::mr(.,method_list=mr_method)
+      return(results[,5:9])
+    }else{
+      res_rap <- mr.raps::mr.raps(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome)
+      results <- data.frame(method = "Robust adjusted profile score (RAPS)", nsnp = nrow(data), b = res_rap$beta.hat, se = res_rap$beta.se, pval = 2*pnorm(abs(res_rap$beta.hat/res_rap$beta.se), lower.tail=FALSE))
+      return(results)
+    }
+    
   }
 }
 
-
-wc_debias(data)
 ```
 
 
@@ -428,7 +432,7 @@ prss_2(data)
 
 We have constructed a function above, namely `prss_2` which takes a set of GWAS summary statistics and simulates the idea of splitting the full sample in two. This approach designates one sample split to discovering the significant SNPs while the other sample split is used to estimate both SNP-exposure and SNP-outcome associations. 
 
-This function, `prss_2`, first takes a data frame or data table which must contain the following columns: SNP identifier, `SNP`, the exposure association estimates, `beta.exposure`, the outcome association estimates, `beta.outcome`, the standard errors of both exposure and outcome association estimates, `se.exposure` and `se.outcome`, the minor allele frequencies in the exposure data set, `eaf.exposure`, the number of samples in the exposure GWAS, `N.exposure`, the number of samples in the outcome GWAS, `N.outcome`, the number of overlapping samples, `N.overlap` and the observed correlation between exposure and outcome, `correlation`. The next argument is `n.iter`, the number of iterations with the default being `n.iter=100`. The third argument, `pi` represents the fraction of total samples that the user wishes to include in the first split, the split that is used to discovery the significant SNPs. Its default value is `pi = 0.5`. The final parameter, `mr_method`, is used to specify the MR method the user wishes to use. A list of all available methods can be found by running the function `mr_method_list()` from the R package, `TwoSampleMR`. The default setting is `mr_method = mr_ivw`, which uses inverse variance weighted regression.
+This function, `prss_2`, first takes a data frame or data table which must contain the following columns: SNP identifier, `SNP`, the exposure association estimates, `beta.exposure`, the outcome association estimates, `beta.outcome`, the standard errors of both exposure and outcome association estimates, `se.exposure` and `se.outcome`, the minor allele frequencies in the exposure data set, `eaf.exposure`, the number of samples in the exposure GWAS, `N.exposure`, the number of samples in the outcome GWAS, `N.outcome`, the number of overlapping samples, `N.overlap` and the observed correlation between exposure and outcome, `correlation`. The next argument is `n.iter`, the number of iterations with the default being `n.iter=100`. The third argument, `pi` represents the fraction of total samples that the user wishes to include in the first split, the split that is used to discovery the significant SNPs. Its default value is `pi = 0.5`. The final parameter, `mr_method`, is used to specify the MR method the user wishes to use. A list of all available methods can be found by running the function `mr_method_list()` from the R package, `TwoSampleMR`. The default setting is `mr_method = "mr_ivw"`, which uses inverse variance weighted regression. 
 
 **Note:** In the function, `wc_debias`, detailed above, a restriction is included - in order for an MR method to be applied to the summary statistics of the second split, at least 3 SNPs must be deemed significant in the first split. The reason for this is due to the fact that MR methods, such as Egger regression and the weighted median approach, require the summary statistics of at least 3 SNPs in order to obtain an appropriate causal effect estimate. 
 
@@ -543,31 +547,38 @@ The trend that we anticipated has been observed - this is encouraging. Of course
 
 ### Use of other MR methods 
 
-In this section, we first compare our proposed approach with the results of applying various MR methods that do not correct for Winner's Curse. We will focus on the following 3 MR methods: Inverse variance weighted regression, MR Egger and weighted median. Thus, we first write a function which will apply these methods along with our approach to a set of summary statistics. The results are outputted in a data frame which allows comparison between values, e.g. in the output below, the first row concerns inverse variance weighted regression in which columns 2-5 are the results of the *naive* approach and columns 6-9 are the results of our proposed `prss` approach. We keep in mind that we have set the true causal effect of the exposure on the outcome to 0.3.
+In this section, we first compare our proposed approach with the results of applying various MR methods that do not correct for Winner's Curse. We will focus on the following 4 MR methods: Inverse variance weighted regression, MR Egger, weighted median and MR RAPS. Thus, we first write a function which will apply these methods along with our approach to a set of summary statistics. The results are outputted in a data frame which allows comparison between values, e.g. in the output below, the first row concerns inverse variance weighted regression in which columns 2-5 are the results of the *naive* approach and columns 6-9 are the results of our proposed `prss` approach. We keep in mind that we have set the true causal effect of the exposure on the outcome to 0.3.
 
 
 ```{r}
 prss_comp <- function(summary_data, frac=0.5){
 dat <- summary_data %>% dplyr::filter(pval.exposure < 5e-8) %>% 
   TwoSampleMR::mr(.,method_list=c("mr_ivw", "mr_egger_regression", "mr_weighted_median"))
+dat <- dat[,5:9]
+
+sig_dat <- summary_data %>% dplyr::filter(pval.exposure < 5e-8)
+res_rap <- mr.raps::mr.raps(sig_dat$beta.exposure, sig_dat$beta.outcome, sig_dat$se.exposure, sig_dat$se.outcome)
+dat_rap <- data.frame(method = "Robust adjusted profile score (RAPS)", nsnp = nrow(sig_dat), b = res_rap$beta.hat, se = res_rap$beta.se, pval = 2*pnorm(abs(res_rap$beta.hat/res_rap$beta.se), lower.tail=FALSE))
+dat <- rbind(dat, dat_rap)
 
 prss_ivw <- prss_2(summary_data, pi = frac, mr_method = "mr_ivw")
 prss_mregger <- prss_2(summary_data, pi = frac, mr_method = "mr_egger_regression")
 prss_med <- prss_2(summary_data, pi = frac, mr_method = "mr_weighted_median")
-prss_all <- rbind(prss_ivw, prss_mregger, prss_med)
+prss_raps <- prss_2(summary_data, pi = frac, mr_method = "mr_raps")
+prss_all <- rbind(prss_ivw, prss_mregger, prss_med, prss_raps)
 prss_all <- prss_all %>%
         rename("nsnp_prss" = "nsnp",
                "b_prss" = "b",
                "se_prss" = "se",
                "pval_prss" = "pval")
-results <- cbind(dat[,5:9], prss_all[,2:5])
+results <- cbind(dat, prss_all[,2:5])
 return(results)
 }
 
 prss_comp(data)
 ```
 
-Here, we see that with a 50/50 split for our simulated data set, our approach seems to have slightly improved IVW and weighted median. However, a notable disimprovement of the causal effect estimate is seen for MR Egger in which our approach has resulted in an over-reduction of the estimate. We will need to interrogate this observation further in our simulation study and investigate if the trend of *disagreement* between our approach and MR Egger is present. 
+Here, we see that with a 50/50 split for our simulated data set, our approach seems to have slightly improved IVW, weighted median and MR RAPS. However, a notable disimprovement of the causal effect estimate is seen for MR Egger in which our approach has resulted in an over-reduction of the estimate. We will need to interrogate this observation further in our simulation study and investigate if the trend of *disagreement* between our approach and MR Egger is present. 
 
 
 ### Determining optimal split fraction
@@ -586,14 +597,13 @@ disc_70 <- prss_comp(data, frac=0.7)
 disc_80 <- prss_comp(data, frac=0.8)
 disc_90 <- prss_comp(data, frac=0.9)
 
-summary <- data.frame(Disc_split = c(rep(30,3),rep(40,3),rep(50,3),rep(60,3),rep(70,3),rep(80,3),rep(90,3)), Method = rep(disc_30$method,7), b_PRSS = c(disc_30$b_prss, disc_40$b_prss, disc_50$b_prss, disc_60$b_prss, disc_70$b_prss, disc_80$b_prss, disc_90$b_prss), se_PRSS = c(disc_30$se_prss, disc_40$se_prss, disc_50$se_prss, disc_60$se_prss, disc_70$se_prss, disc_80$se_prss, disc_90$se_prss))
+summary <- data.frame(Disc_split = c(rep(30,4),rep(40,4),rep(50,4),rep(60,4),rep(70,4),rep(80,4),rep(90,4)), Method = rep(disc_30$method,7), b_PRSS = c(disc_30$b_prss, disc_40$b_prss, disc_50$b_prss, disc_60$b_prss, disc_70$b_prss, disc_80$b_prss, disc_90$b_prss), se_PRSS = c(disc_30$se_prss, disc_40$se_prss, disc_50$se_prss, disc_60$se_prss, disc_70$se_prss, disc_80$se_prss, disc_90$se_prss))
 
-ggplot(summary, aes(x = Disc_split, y= b_PRSS, color=Method, shape=Method)) + geom_point(size=3) + scale_color_manual(values=c(col[1],col[2],col[3])) +
+ggplot(summary, aes(x = Disc_split, y= b_PRSS, color=Method, shape=Method)) + geom_point(size=3) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + scale_shape_manual(values=c(15,16,17,18)) +
   geom_errorbar(aes(ymin=b_PRSS-se_PRSS, ymax=b_PRSS+se_PRSS), width=3,
                  position=position_dodge(0.05)) +
     geom_line() + geom_hline(yintercept=0.3, color = "black", lwd=1) + 
-labs(x = "% discovery split", y="Causal effect estimate (PRSS)") + geom_hline(yintercept=disc_30$b[1], linetype="dashed", lwd= 1, color = col[1]) + geom_hline(yintercept=disc_30$b[2], linetype="dashed", lwd = 1, color = col[2]) + 
-geom_hline(yintercept=disc_30$b[3], linetype="dashed",lwd = 1, color = col[3])
+labs(x = "% discovery split", y="Causal effect estimate (PRSS)") + geom_hline(yintercept=disc_30$b[1], linetype="dashed", lwd= 1, color = col[1]) + geom_hline(yintercept=disc_30$b[2], linetype="dashed", lwd = 1, color = col[2]) + geom_hline(yintercept=disc_30$b[3], linetype="dashed",lwd = 1, color = col[4]) + geom_hline(yintercept=disc_30$b[4], linetype="dashed",lwd = 1, color = col[3])
 ```
 
 We repeat the above process of varying the percentage of samples in the discovery split when there is no overlap between the exposure and outcome data sets, i.e. `frac_overlap = 0`.
@@ -611,14 +621,13 @@ disc_70 <- prss_comp(data, frac=0.7)
 disc_80 <- prss_comp(data, frac=0.8)
 disc_90 <- prss_comp(data, frac=0.9)
 
-summary <- data.frame(Disc_split = c(rep(30,3),rep(40,3),rep(50,3),rep(60,3),rep(70,3),rep(80,3),rep(90,3)), Method = rep(disc_30$method,7), b_PRSS = c(disc_30$b_prss, disc_40$b_prss, disc_50$b_prss, disc_60$b_prss, disc_70$b_prss, disc_80$b_prss, disc_90$b_prss), se_PRSS = c(disc_30$se_prss, disc_40$se_prss, disc_50$se_prss, disc_60$se_prss, disc_70$se_prss, disc_80$se_prss, disc_90$se_prss))
+summary <- data.frame(Disc_split = c(rep(30,4),rep(40,4),rep(50,4),rep(60,4),rep(70,4),rep(80,4),rep(90,4)), Method = rep(disc_30$method,7), b_PRSS = c(disc_30$b_prss, disc_40$b_prss, disc_50$b_prss, disc_60$b_prss, disc_70$b_prss, disc_80$b_prss, disc_90$b_prss), se_PRSS = c(disc_30$se_prss, disc_40$se_prss, disc_50$se_prss, disc_60$se_prss, disc_70$se_prss, disc_80$se_prss, disc_90$se_prss))
 
-ggplot(summary, aes(x = Disc_split, y= b_PRSS, color=Method, shape=Method)) + geom_point(size=3) + scale_color_manual(values=c(col[1],col[2],col[3])) +
+ggplot(summary, aes(x = Disc_split, y= b_PRSS, color=Method, shape=Method)) + geom_point(size=3) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + scale_shape_manual(values=c(15,16,17,18)) +
   geom_errorbar(aes(ymin=b_PRSS-se_PRSS, ymax=b_PRSS+se_PRSS), width=3,
                  position=position_dodge(0.05)) +
     geom_line() + geom_hline(yintercept=0.3, color = "black", lwd=1) + 
-labs(x = "% discovery split", y="Causal effect estimate (PRSS)") + geom_hline(yintercept=disc_30$b[1], linetype="dashed", lwd= 1, color = col[1]) + geom_hline(yintercept=disc_30$b[2], linetype="dashed", lwd = 1, color = col[2]) + 
-geom_hline(yintercept=disc_30$b[3], linetype="dashed",lwd = 1, color = col[3])
+labs(x = "% discovery split", y="Causal effect estimate (PRSS)") + geom_hline(yintercept=disc_30$b[1], linetype="dashed", lwd= 1, color = col[1]) + geom_hline(yintercept=disc_30$b[2], linetype="dashed", lwd = 1, color = col[2]) + geom_hline(yintercept=disc_30$b[3], linetype="dashed",lwd = 1, color = col[4]) + geom_hline(yintercept=disc_30$b[4], linetype="dashed",lwd = 1, color = col[3])
 ```
 
 
@@ -637,14 +646,13 @@ disc_70 <- prss_comp(data, frac=0.7)
 disc_80 <- prss_comp(data, frac=0.8)
 disc_90 <- prss_comp(data, frac=0.9)
 
-summary <- data.frame(Disc_split = c(rep(30,3),rep(40,3),rep(50,3),rep(60,3),rep(70,3),rep(80,3),rep(90,3)), Method = rep(disc_30$method,7), b_PRSS = c(disc_30$b_prss, disc_40$b_prss, disc_50$b_prss, disc_60$b_prss, disc_70$b_prss, disc_80$b_prss, disc_90$b_prss), se_PRSS = c(disc_30$se_prss, disc_40$se_prss, disc_50$se_prss, disc_60$se_prss, disc_70$se_prss, disc_80$se_prss, disc_90$se_prss))
+summary <- data.frame(Disc_split = c(rep(30,4),rep(40,4),rep(50,4),rep(60,4),rep(70,4),rep(80,4),rep(90,4)), Method = rep(disc_30$method,7), b_PRSS = c(disc_30$b_prss, disc_40$b_prss, disc_50$b_prss, disc_60$b_prss, disc_70$b_prss, disc_80$b_prss, disc_90$b_prss), se_PRSS = c(disc_30$se_prss, disc_40$se_prss, disc_50$se_prss, disc_60$se_prss, disc_70$se_prss, disc_80$se_prss, disc_90$se_prss))
 
-ggplot(summary, aes(x = Disc_split, y= b_PRSS, color=Method, shape=Method)) + geom_point(size=3) + scale_color_manual(values=c(col[1],col[2],col[3])) +
+ggplot(summary, aes(x = Disc_split, y= b_PRSS, color=Method, shape=Method)) + geom_point(size=3) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + scale_shape_manual(values=c(15,16,17,18)) +
   geom_errorbar(aes(ymin=b_PRSS-se_PRSS, ymax=b_PRSS+se_PRSS), width=3,
                  position=position_dodge(0.05)) +
     geom_line() + geom_hline(yintercept=0.3, color = "black", lwd=1) + 
-labs(x = "% discovery split", y="Causal effect estimate (PRSS)") + geom_hline(yintercept=disc_30$b[1], linetype="dashed", lwd= 1, color = col[1]) + geom_hline(yintercept=disc_30$b[2], linetype="dashed", lwd = 1, color = col[2]) + 
-geom_hline(yintercept=disc_30$b[3], linetype="dashed",lwd = 1, color = col[3]) 
+labs(x = "% discovery split", y="Causal effect estimate (PRSS)") + geom_hline(yintercept=disc_30$b[1], linetype="dashed", lwd= 1, color = col[1]) + geom_hline(yintercept=disc_30$b[2], linetype="dashed", lwd = 1, color = col[2]) + geom_hline(yintercept=disc_30$b[3], linetype="dashed",lwd = 1, color = col[4]) + geom_hline(yintercept=disc_30$b[4], linetype="dashed",lwd = 1, color = col[3]) 
 ```
 
 
@@ -666,7 +674,7 @@ As a first step in our simulation study, we will consider the scenario in which 
 
 -   Fraction of overlap, `frac_overlap` $\in \{0, 0.25, 0.5, 0.75, 1\}$
 
-This provides us with $2 \times 2 \times 5 = 20$ individual simulation settings, with us first considering a total of 20 repetitions, i.e. `tot_sim = 20`. As suggested above, the code for this simulation study is contained in `winnerscurse_MR_sim1.R`, with various functions such as those already provided in this document contained in `useful_funs_MR.R`. It should be noted here that this is a very simple set-up in which **no SNPs demonstrate pleiotropy**, and we just focus on the use of three MR methods; inverse variance weighted regression, Egger regression and weighted median. 
+This provides us with $2 \times 2 \times 5 = 20$ individual simulation settings, with us first considering a total of 20 repetitions, i.e. `tot_sim = 20`. As suggested above, the code for this simulation study is contained in `winnerscurse_MR_sim1.R`, with various functions such as those already provided in this document contained in `useful_funs_MR.R`. It should be noted here that this is a very simple set-up in which **no SNPs demonstrate pleiotropy**, and we just focus on the use of four MR methods; inverse variance weighted regression, Egger regression, weighted median and Robust adjusted profile score (RAPS). 
 
 
 ### Quantifying extent of Winner's Curse bias 
@@ -676,8 +684,8 @@ Before analysing the results of application of MR methods, we first have a look 
 ```{r, eval=FALSE}
 summary_results_wc <- read.csv("degreee_wc_20sim.csv")
 
-plotA <- ggplot(summary_results_wc, aes(x=as.numeric(n_sig_snps),y=as.numeric(per_over),colour=scenario)) + geom_point(aes(color=scenario)) +  scale_color_manual(values=c(col[4],col[5],col[6],col[8])) + xlab("No. sig SNPs")+ ylab(expression(paste("% sig SNPs overestimated"))) + theme(legend.title = element_blank(),legend.box.background = element_rect(colour = "black"),legend.spacing.y = unit(0, "mm"), legend.background=element_blank())
-plotB <- ggplot(summary_results_wc, aes(x=as.numeric(n_sig_snps),y=as.numeric(per_sig_over),colour=scenario)) + geom_point(aes(color=scenario)) +  scale_color_manual(values=c(col[4],col[5],col[6],col[8])) + xlab("No. sig SNPs")+ ylab(expression(paste("% sig SNPs", italic(" significantly "), "overestimated"))) + theme(legend.title = element_blank(),legend.box.background = element_rect(colour = "black"),legend.spacing.y = unit(0, "mm"), legend.background=element_blank())
+plotA <- ggplot(summary_results_wc, aes(x=as.numeric(n_sig_snps),y=as.numeric(per_over),colour=scenario)) + geom_point(aes(color=scenario)) +  scale_color_manual(values=c(col[5],col[6],col[7],col[8])) + xlab("No. sig SNPs")+ ylab(expression(paste("% sig SNPs overestimated"))) + theme(legend.title = element_blank(),legend.box.background = element_rect(colour = "black"),legend.spacing.y = unit(0, "mm"), legend.background=element_blank())
+plotB <- ggplot(summary_results_wc, aes(x=as.numeric(n_sig_snps),y=as.numeric(per_sig_over),colour=scenario)) + geom_point(aes(color=scenario)) +  scale_color_manual(values=c(col[5],col[6],col[7],col[8])) + xlab("No. sig SNPs")+ ylab(expression(paste("% sig SNPs", italic(" significantly "), "overestimated"))) + theme(legend.title = element_blank(),legend.box.background = element_rect(colour = "black"),legend.spacing.y = unit(0, "mm"), legend.background=element_blank())
 figure <- plotA + plotB & theme(legend.position = "bottom", legend.box.background = element_rect(colour = "black"))
 ```
 
@@ -692,7 +700,7 @@ The two plots above suggest that as the number of significant SNPs increases, th
 In addition to the above graph, we create four boxplots which display the distribution of MSE for significant SNPs computed for each combination of heritability and number of causal SNPs. 
 
 ```{r}
-ggplot(summary_results_wc,aes(x=scenario,y=MSE,colour=scenario)) + geom_boxplot(size=0.5,aes(color=scenario)) +  scale_color_manual(values=c(col[4],col[5],col[6],col[8])) + ylab("MSE of sig SNPs") + xlab("") + theme(legend.title = element_blank(),legend.box.background = element_rect(colour = "black"),legend.spacing.y = unit(0, "mm"), legend.background=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+ggplot(summary_results_wc,aes(x=scenario,y=MSE,colour=scenario)) + geom_boxplot(size=0.5,aes(color=scenario)) +  scale_color_manual(values=c(col[5],col[6],col[7],col[8])) + ylab("MSE of sig SNPs") + xlab("") + theme(legend.title = element_blank(),legend.box.background = element_rect(colour = "black"),legend.spacing.y = unit(0, "mm"), legend.background=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 ```
 
 
@@ -711,18 +719,20 @@ We first apply `summary_table` to our entire set of results, as shown below. Thi
 res_ivw <- read.csv("compare_ivw_20sim.csv")
 res_egger <- read.csv("compare_egger_20sim.csv")
 res_med <- read.csv("compare_med_20sim.csv")
-res_comp_A <- rbind(res_ivw, res_egger, res_med)
+res_raps <- read.csv("compare_raps_20sim.csv")
+res_comp_A <- rbind(res_ivw, res_egger, res_med, res_raps)
 res_ivw_long <- read.csv("compare_ivw_20sim_long.csv")
 res_egger_long <- read.csv("compare_egger_20sim_long.csv")
 res_med_long <- read.csv("compare_med_20sim_long.csv")
-res_comp <- rbind(res_ivw_long, res_egger_long, res_med_long)
+res_raps_long <- read.csv("compare_raps_20sim_long.csv")
+res_comp <- rbind(res_ivw_long, res_egger_long, res_med_long, res_raps_long)
 
-summary_table <- function(res_ivw, res_egger, res_med, res_comp_A){
-table_res <- data.frame(Method = unique(res_comp_A$method), Per_improve = c((sum(abs(as.numeric(res_ivw$b) - 0.3) > abs(as.numeric(res_ivw$b_prss)-0.3))/nrow(res_ivw))*100, (sum(abs(as.numeric(res_egger$b) - 0.3) > abs(as.numeric(res_egger$b_prss)-0.3))/nrow(res_egger))*100, (sum(abs(as.numeric(res_med$b) - 0.3) > abs(as.numeric(res_med$b_prss)-0.3))/nrow(res_med))*100), MSE_naive = c(mean((as.numeric(res_ivw$b) - 0.3)^2), mean((as.numeric(res_egger$b) - 0.3)^2), mean((as.numeric(res_med$b) - 0.3)^2)), MSE_PRSS = c(mean((as.numeric(res_ivw$b_prss) - 0.3)^2), mean((as.numeric(res_egger$b_prss) - 0.3)^2), mean((as.numeric(res_med$b_prss) - 0.3)^2)))
+summary_table <- function(res_ivw, res_egger, res_med, res_raps, res_comp_A){
+table_res <- data.frame(Method = unique(res_comp_A$method), Per_improve = c((sum(abs(as.numeric(res_ivw$b) - 0.3) > abs(as.numeric(res_ivw$b_prss)-0.3))/nrow(res_ivw))*100, (sum(abs(as.numeric(res_egger$b) - 0.3) > abs(as.numeric(res_egger$b_prss)-0.3))/nrow(res_egger))*100, (sum(abs(as.numeric(res_med$b) - 0.3) > abs(as.numeric(res_med$b_prss)-0.3))/nrow(res_med))*100, (sum(abs(as.numeric(res_raps$b) - 0.3) > abs(as.numeric(res_raps$b_prss)-0.3))/nrow(res_raps))*100), MSE_naive = c(mean((as.numeric(res_ivw$b) - 0.3)^2), mean((as.numeric(res_egger$b) - 0.3)^2), mean((as.numeric(res_med$b) - 0.3)^2), mean((as.numeric(res_raps$b) - 0.3)^2)), MSE_PRSS = c(mean((as.numeric(res_ivw$b_prss) - 0.3)^2), mean((as.numeric(res_egger$b_prss) - 0.3)^2), mean((as.numeric(res_med$b_prss) - 0.3)^2), mean((as.numeric(res_raps$b_prss) - 0.3)^2)))
 return(table_res)
 }
 
-summary_table(res_ivw, res_egger, res_med, res_comp_A)
+summary_table(res_ivw, res_egger, res_med, res_raps, res_comp_A)
 ```
 
 
@@ -731,13 +741,13 @@ summary_table(res_ivw, res_egger, res_med, res_comp_A)
 <span style="color: purple;">**$\star$ No overlap:**</span> 
 
 ```{r}
-summary_table(res_ivw[res_ivw$frac_overlap == 0,], res_egger[res_egger$frac_overlap == 0,], res_med[res_med$frac_overlap == 0,], res_comp_A[res_comp_A$frac_overlap == 0,])
+summary_table(res_ivw[res_ivw$frac_overlap == 0,], res_egger[res_egger$frac_overlap == 0,], res_med[res_med$frac_overlap == 0,], res_raps[res_raps$frac_overlap == 0,], res_comp_A[res_comp_A$frac_overlap == 0,])
 ```
 
 ```{r}
 res_0 <- res_comp[res_comp$frac_overlap == 0, ]
-ggplot(res_0,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3]))  + ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "No overlap")
-ggplot(res_0,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "No overlap") 
+ggplot(res_0,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  + ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "No overlap")
+ggplot(res_0,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "No overlap") 
 ```
 
 <br>
@@ -745,14 +755,14 @@ ggplot(res_0,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)
 <span style="color: purple;">**$\star$ Partial overlap (25%):**</span> 
 
 ```{r}
-summary_table(res_ivw[res_ivw$frac_overlap == 0.25,], res_egger[res_egger$frac_overlap == 0.25,], res_med[res_med$frac_overlap == 0.25,], res_comp_A[res_comp_A$frac_overlap == 0.25,])
+summary_table(res_ivw[res_ivw$frac_overlap == 0.25,], res_egger[res_egger$frac_overlap == 0.25,], res_med[res_med$frac_overlap == 0.25,], res_raps[res_raps$frac_overlap == 0.25,], res_comp_A[res_comp_A$frac_overlap == 0.25,])
 ```
 
 ```{r}
 res_25 <- res_comp[res_comp$frac_overlap == 0.25, ]
-ggplot(res_25,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3]))  +
+ggplot(res_25,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  +
   ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (25%)")
-ggplot(res_25,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (25%)")
+ggplot(res_25,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (25%)")
 ```
 
 
@@ -762,14 +772,14 @@ ggplot(res_25,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS
 <span style="color: purple;">**$\star$ Partial overlap (50%):**</span> 
 
 ```{r}
-summary_table(res_ivw[res_ivw$frac_overlap == 0.5,], res_egger[res_egger$frac_overlap == 0.5,], res_med[res_med$frac_overlap == 0.5,], res_comp_A[res_comp_A$frac_overlap == 0.5,])
+summary_table(res_ivw[res_ivw$frac_overlap == 0.5,], res_egger[res_egger$frac_overlap == 0.5,], res_med[res_med$frac_overlap == 0.5,], res_raps[res_raps$frac_overlap == 0.5,], res_comp_A[res_comp_A$frac_overlap == 0.5,])
 ```
 
 ```{r}
 res_50 <- res_comp[res_comp$frac_overlap == 0.5, ]
-ggplot(res_50,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3]))  +
+ggplot(res_50,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  +
   ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (50%)")
-ggplot(res_50,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (50%)") 
+ggplot(res_50,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (50%)") 
 ```
 
 
@@ -778,14 +788,14 @@ ggplot(res_50,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS
 <span style="color: purple;">**$\star$ Partial overlap (75%):**</span> 
 
 ```{r}
-summary_table(res_ivw[res_ivw$frac_overlap == 0.75,], res_egger[res_egger$frac_overlap == 0.75,], res_med[res_med$frac_overlap == 0.75,], res_comp_A[res_comp_A$frac_overlap == 0.75,])
+summary_table(res_ivw[res_ivw$frac_overlap == 0.75,], res_egger[res_egger$frac_overlap == 0.75,], res_med[res_med$frac_overlap == 0.75,], res_raps[res_raps$frac_overlap == 0.75,], res_comp_A[res_comp_A$frac_overlap == 0.75,])
 ```
 
 ```{r}
 res_75 <- res_comp[res_comp$frac_overlap == 0.75, ]
-ggplot(res_75,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3]))  +
+ggplot(res_75,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  +
   ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (75%)")
-ggplot(res_75,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (75%)")
+ggplot(res_75,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (75%)")
 ```
 
 
@@ -795,25 +805,136 @@ ggplot(res_75,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS
 <span style="color: purple;">**$\star$ Full overlap:**</span> 
 
 ```{r}
-summary_table(res_ivw[res_ivw$frac_overlap == 1,], res_egger[res_egger$frac_overlap == 1,], res_med[res_med$frac_overlap == 1,], res_comp_A[res_comp_A$frac_overlap == 1,])
+summary_table(res_ivw[res_ivw$frac_overlap == 1,], res_egger[res_egger$frac_overlap == 1,], res_med[res_med$frac_overlap == 1,], res_raps[res_raps$frac_overlap == 1,], res_comp_A[res_comp_A$frac_overlap == 1,])
 ```
 
 ```{r}
 res_100 <- res_comp[res_comp$frac_overlap == 1, ]
-ggplot(res_100,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3]))  +
+ggplot(res_100,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  +
   ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Full overlap")
-ggplot(res_100,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Full overlap")
+ggplot(res_100,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Full overlap")
 ```
 
 <br> 
 
-<span style="color: purple;">***Summary of above results:***</span> 
+<span style="color: purple;">***Summary of results:***</span> 
 
-- A similar trend is observed for both **IVW and Weighted median** approaches. The **best results** for these two methods seem to occur when we have **fully overlapping** exposure and outcome data sets as for both methods, application of our approach results in an improvement in the causal effect estimate more than 90% of the time. Similar performance is also observed in the case of **no overlap**, especially for IVW. However, when partial overlap is introduced in the form of 25% or 75%, a clear dilution in the effectiveness of our approach for these two methods is evident. Values greater than 50% are still being observed for improvement, however there are more cases in which our approach has resulted in causal effect estimates further from the true value. Finally, when overlap is at 50%, our approach performs very poorly for both IVW and weighted median with values of percentage of improvement as low as 33.75% and 26.25% respectively. This is a concerning result and perhaps is due to the additional variance introduced by our approach. Also, we note that it is known that the direction of weak instrument bias is towards the null when exposure and outcome samples are independent and towards the observed (confounded) estimate when there is complete sample overlap. Thus, naturally, there will be a point of overlap in which the bias acting in both directions will even out if you might say. We hypothesize that this is what is occurring at around 50% in our simulated examples.
+- A similar trend is observed for **IVW, Weighted median and MR RAPS** approaches. The **best results** for these three methods seem to occur when we have **fully overlapping** exposure and outcome data sets as for both methods, application of our approach results in an improvement in the causal effect estimate more than 90% of the time. Similar performance is also observed in the case of **no overlap**, especially for IVW and MR RAPS. However, when partial overlap is introduced in the form of 25% or 75%, a clear dilution in the effectiveness of our approach for these three methods is evident. Values greater than 50% are still being observed for improvement, however there are more cases in which our approach has resulted in causal effect estimates further from the true value. Finally, when overlap is at 50%, our approach performs very poorly for IVW, weighted median and MR RAPS with values of percentage of improvement as low as 33.75%, 26.25% and 26.25% respectively. This is a concerning result and perhaps is due to the additional variance introduced by our approach. Also, we note that it is known that the direction of weak instrument bias is towards the null when exposure and outcome samples are independent and towards the observed (confounded) estimate when there is complete sample overlap. Thus, naturally, there will be a point of overlap in which the bias acting in both directions will even out if you might say. We hypothesize that this is what is occurring at around 50% in our simulated examples.
 
-- There is an obvious contrast between the results obtained for **MR Egger** and those of the other two methods. The only instance in which the value for percentage of improvement is above 50% is when there is 50% overlap. In all other instance, our approach demonstrates **very poor performance**, with percentage of improvement as low as 7.5% when the exposure and outcomes data sets are fully overlapping. 
+- There is an obvious contrast between the results obtained for **MR Egger** and those of the other three methods. The only instance in which the value for percentage of improvement is above 50% is when there is 50% overlap. In all other instance, our approach demonstrates **very poor performance**, with percentage of improvement as low as 7.5% when the exposure and outcomes data sets are fully overlapping. 
 
 <br> 
+
+### Confounding in opposite direction
+
+```{r}
+res_ivw <- read.csv("compare_ivw_20sim_2.csv")
+res_egger <- read.csv("compare_egger_20sim_2.csv")
+res_med <- read.csv("compare_med_20sim_2.csv")
+res_raps <- read.csv("compare_raps_20sim_2.csv")
+res_comp_A <- rbind(res_ivw, res_egger, res_med, res_raps)
+res_ivw_long <- read.csv("compare_ivw_20sim_long_2.csv")
+res_egger_long <- read.csv("compare_egger_20sim_long_2.csv")
+res_med_long <- read.csv("compare_med_20sim_long_2.csv")
+res_raps_long <- read.csv("compare_raps_20sim_long_2.csv")
+res_comp <- rbind(res_ivw_long, res_egger_long, res_med_long, res_raps_long)
+
+summary_table <- function(res_ivw, res_egger, res_med, res_raps, res_comp_A){
+table_res <- data.frame(Method = unique(res_comp_A$method), Per_improve = c((sum(abs(as.numeric(res_ivw$b) - 0.3) > abs(as.numeric(res_ivw$b_prss)-0.3))/nrow(res_ivw))*100, (sum(abs(as.numeric(res_egger$b) - 0.3) > abs(as.numeric(res_egger$b_prss)-0.3))/nrow(res_egger))*100, (sum(abs(as.numeric(res_med$b) - 0.3) > abs(as.numeric(res_med$b_prss)-0.3))/nrow(res_med))*100, (sum(abs(as.numeric(res_raps$b) - 0.3) > abs(as.numeric(res_raps$b_prss)-0.3))/nrow(res_raps))*100), MSE_naive = c(mean((as.numeric(res_ivw$b) - 0.3)^2), mean((as.numeric(res_egger$b) - 0.3)^2), mean((as.numeric(res_med$b) - 0.3)^2), mean((as.numeric(res_raps$b) - 0.3)^2)), MSE_PRSS = c(mean((as.numeric(res_ivw$b_prss) - 0.3)^2), mean((as.numeric(res_egger$b_prss) - 0.3)^2), mean((as.numeric(res_med$b_prss) - 0.3)^2), mean((as.numeric(res_raps$b_prss) - 0.3)^2)))
+return(table_res)
+}
+
+summary_table(res_ivw, res_egger, res_med, res_raps, res_comp_A)
+```
+
+
+<br> 
+
+<span style="color: purple;">**$\star$ No overlap:**</span> 
+
+```{r}
+summary_table(res_ivw[res_ivw$frac_overlap == 0,], res_egger[res_egger$frac_overlap == 0,], res_med[res_med$frac_overlap == 0,], res_raps[res_raps$frac_overlap == 0,], res_comp_A[res_comp_A$frac_overlap == 0,])
+```
+
+```{r}
+res_0 <- res_comp[res_comp$frac_overlap == 0, ]
+ggplot(res_0,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  + ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "No overlap")
+ggplot(res_0,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "No overlap") 
+```
+
+
+
+<br>
+
+<span style="color: purple;">**$\star$ Partial overlap (25%):**</span> 
+
+```{r}
+summary_table(res_ivw[res_ivw$frac_overlap == 0.25,], res_egger[res_egger$frac_overlap == 0.25,], res_med[res_med$frac_overlap == 0.25,], res_raps[res_raps$frac_overlap == 0.25,], res_comp_A[res_comp_A$frac_overlap == 0.25,])
+```
+
+```{r}
+res_25 <- res_comp[res_comp$frac_overlap == 0.25, ]
+ggplot(res_25,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  +
+  ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (25%)")
+ggplot(res_25,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (25%)")
+```
+
+
+<br>
+
+<span style="color: purple;">**$\star$ Partial overlap (50%):**</span> 
+
+```{r}
+summary_table(res_ivw[res_ivw$frac_overlap == 0.5,], res_egger[res_egger$frac_overlap == 0.5,], res_med[res_med$frac_overlap == 0.5,], res_raps[res_raps$frac_overlap == 0.5,], res_comp_A[res_comp_A$frac_overlap == 0.5,])
+```
+
+```{r}
+res_50 <- res_comp[res_comp$frac_overlap == 0.5, ]
+ggplot(res_50,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  +
+  ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (50%)")
+ggplot(res_50,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (50%)") 
+```
+
+<br>
+
+<span style="color: purple;">**$\star$ Partial overlap (75%):**</span> 
+
+```{r}
+summary_table(res_ivw[res_ivw$frac_overlap == 0.75,], res_egger[res_egger$frac_overlap == 0.75,], res_med[res_med$frac_overlap == 0.75,], res_raps[res_raps$frac_overlap == 0.75,], res_comp_A[res_comp_A$frac_overlap == 0.75,])
+```
+
+```{r}
+res_75 <- res_comp[res_comp$frac_overlap == 0.75, ]
+ggplot(res_75,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  +
+  ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (75%)")
+ggplot(res_75,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Partial overlap (75%)")
+```
+
+
+<br>
+
+<span style="color: purple;">**$\star$ Full overlap:**</span> 
+
+```{r}
+summary_table(res_ivw[res_ivw$frac_overlap == 1,], res_egger[res_egger$frac_overlap == 1,], res_med[res_med$frac_overlap == 1,], res_raps[res_raps$frac_overlap == 1,], res_comp_A[res_comp_A$frac_overlap == 1,])
+```
+
+```{r}
+res_100 <- res_comp[res_comp$frac_overlap == 1, ]
+ggplot(res_100,aes(x=PRSS,y=as.numeric(b),colour=Method)) + geom_boxplot(aes(color=Method), position=position_dodge(0.8)) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4]))  +
+  ylab("Causal effect estimate") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Full overlap")
+ggplot(res_100,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRSS)) + geom_line(aes(color=Method, linetype=PRSS), size=0.8) + facet_grid(h2~n_snps,labeller=label_both) + scale_color_manual(values=c(col[1],col[2],col[3], col[4])) + ylab("Causal effect estimate") + xlab("Simulation") + geom_hline(yintercept=0.3, colour="black", size=1) + ggtitle(label = "Full overlap")
+```
+
+
+<br> 
+
+<span style="color: purple;">***Summary of results:***</span> 
+
+
+
+
+
 
 ## Poor performance of MR Egger
 
@@ -922,13 +1043,6 @@ b_exp <- data$beta.exposure
 b_out <- data$beta.outcome
 se_exp <- data$se.exposure
 se_out <- data$se.outcome
-sign0 <- function(x){
-  x[x==0] <- 1
-  return(sign(x))
-}
-to_flip <- sign0(b_exp) == -1
-b_out = b_out*sign0(b_exp)
-b_exp = abs(b_exp)
 summary(lm(b_out ~ b_exp, weights=1/se_out^2))$coefficients
 ```
 
@@ -951,6 +1065,10 @@ ggplot(data_flip, aes(x=beta.exposure, y=beta.outcome)) + geom_point() + geom_ab
 
 
 <span style="color: #C21B1E;">**Question:** ***Does our approach introduce more weak instrument bias?***</span>
+
+
+
+Discussion of NoME and regression dilution bias - could poor MR Egger performance be improved with SIMEX? 
 
 
 ```{r}
@@ -1047,7 +1165,7 @@ ggplot(results_Isq,aes(x=ave_f, fill=method)) + geom_density(alpha=0.4) + xlab("
 
 
 
-
+implementation of mr_raps?? how can I do this and where do I start?? 
 
 
 

@@ -110,7 +110,7 @@ wc_debias <- function(data,pi=0.5,mr_method="mr_ivw", threshold=5e-8){
     beta.exposure.2 <- (data$beta.exposure - pi*data$beta.exposure.1)/(1-pi)
     beta.outcome.2 <- (data$beta.outcome - pi*data$beta.outcome.1)/(1-pi)
     se.exposure.2 <- sqrt(((1)/(1-pi))*(1/(data$N.exposure[1]*2*data$maf*(1-data$maf))))
-    se.outcome.2 <- sqrt(((1)/(1-pi))*(1/(data$N.outcome[1]*2*data$maf*(1-data$maf))) )
+    se.outcome.2 <- sqrt(((1)/(1-pi))*(1/(data$N.outcome[1]*2*data$maf*(1-data$maf))))
 
     data <- tibble(
       SNP = data$SNP,
@@ -131,11 +131,18 @@ wc_debias <- function(data,pi=0.5,mr_method="mr_ivw", threshold=5e-8){
       mr_keep=TRUE
     )
 
-    results <- data %>%
-      TwoSampleMR::mr(.,method_list=mr_method)
-    return(results[,5:9])
+    if(mr_method != "mr_raps"){
+      results <- data %>% TwoSampleMR::mr(.,method_list=mr_method)
+      return(results[,5:9])
+    }else{
+      res_rap <- mr.raps::mr.raps(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome)
+      results <- data.frame(method = "Robust adjusted profile score (RAPS)", nsnp = nrow(data), b = res_rap$beta.hat, se = res_rap$beta.se, pval = 2*pnorm(abs(res_rap$beta.hat/res_rap$beta.se), lower.tail=FALSE))
+      return(results)
+    }
+
   }
 }
+
 
 
 

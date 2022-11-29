@@ -110,7 +110,7 @@ res_egger <- mclapply(1:nrow(sim_params), function(i){
 
 ################################################################################
 
-## Weighed Median simulations
+## Weighted Median simulations
 
 set.seed(1996)
 
@@ -145,6 +145,42 @@ res_med <- mclapply(1:nrow(sim_params), function(i){
   do.call(run_sim, args=as.list(sim_params[i,]))}, mc.cores=1)
 
 ################################################################################
+
+## MR RAPS simulations
+
+set.seed(1996)
+
+run_sim <- function(n_snps, h2, frac_overlap, sim, n_x = N_x, n_y = N_y, cor_xy = Cor_xy, beta_xy = Beta_xy)
+{
+  stats <- sim_mr_ss(n_snps, h2, frac_overlap, n_x, n_y, cor_xy, beta_xy)
+  stats_sig <- stats[stats$pval.exposure < 5e-8, ]
+
+  params <- data.frame(sim = sim, n_snps = n_snps, h2 = h2, frac_overlap)
+
+  while(nrow(stats_sig) < 3){
+    stats <- sim_mr_ss(n_snps, h2, frac_overlap, n_x, n_y, cor_xy, beta_xy)
+    stats_sig <- stats[stats$pval.exposure < 5e-8, ]
+  }
+
+  ## Evaluate extent of Winner's Curse
+  summary_wc <- wc_summary(stats)
+
+  ## Apply original MR method
+  sig_dat <- stats %>% dplyr::filter(pval.exposure < 5e-8)
+  res_rap <- mr.raps::mr.raps(sig_dat$beta.exposure, sig_dat$beta.outcome, sig_dat$se.exposure, sig_dat$se.outcome)
+  orig_res <- data.frame(method = "Robust adjusted profile score (RAPS)", nsnp = nrow(data), b = res_rap$beta.hat, se = res_rap$beta.se, pval = 2*pnorm(abs(res_rap$beta.hat/res_rap$beta.se), lower.tail=FALSE))
+
+  ## Apply our proposed method with default parameters
+  prss_res <- prss_2(stats, mr_method = "mr_raps")
+
+  ## return a list of parameters
+  results <- list(params = params, summary_wc = summary_wc, orig_res = orig_res, prss_res = prss_res, data = stats)
+
+  return(results)
+}
+res_raps <- mclapply(1:nrow(sim_params), function(i){
+  do.call(run_sim, args=as.list(sim_params[i,]))}, mc.cores=1)
+
 ################################################################################
 
 ## save results of comparison of methods
@@ -184,6 +220,17 @@ write.csv(summary_results_med, "compare_med_20sim.csv")
 summary_results_med_long <- data.frame(sim = c(rep(summary_results_med$sim,2)), n_snps = c(rep(summary_results_med$n_snps,2)), h2 = c(rep(summary_results_med$h2,2)), frac_overlap = c(rep(summary_results_med$frac_overlap,2)), Method = c(rep(summary_results_med$method,2)), PRSS = c(rep("No",nrow(summary_results_med)), rep("Yes",nrow(summary_results_med))), nsnp = c(summary_results_med$nsnp, summary_results_med$nsnp_prss), b = c(summary_results_med$b, summary_results_med$b_prss), se = c(summary_results_med$se, summary_results_med$se_prss), pval = c(summary_results_med$pval, summary_results_med$pval_prss))
 write.csv(summary_results_med_long, "compare_med_20sim_long.csv")
 
+summary_results_raps <- data.frame(sim = res_raps[[1]]$params$sim, n_snps = res_raps[[1]]$params$n_snps, h2 = res_raps[[1]]$params$h2, frac_overlap = res_raps[[1]]$params$frac_overlap, method = res_raps[[1]]$orig_res$method, nsnp = res_raps[[1]]$orig_res$nsnp, b = res_raps[[1]]$orig_res$b, se = res_raps[[1]]$orig_res$se, pval = res_raps[[1]]$orig_res$pval, nsnp_prss = res_raps[[1]]$prss_res$nsnp, b_prss = res_raps[[1]]$prss_res$b, se_prss = res_raps[[1]]$prss_res$se, pval_prss = res_raps[[1]]$prss_res$pval)
+for(i in 2:length(res_raps)){
+  if(is.null(res_raps[[i]]$prss_res) == FALSE){
+    vec <- c(res_raps[[i]]$params$sim, res_raps[[i]]$params$n_snps, res_raps[[i]]$params$h2, res_raps[[i]]$params$frac_overlap, res_raps[[i]]$orig_res$method, res_raps[[i]]$orig_res$nsnp, res_raps[[i]]$orig_res$b, res_raps[[i]]$orig_res$se, res_raps[[i]]$orig_res$pval, res_raps[[i]]$prss_res$nsnp, res_raps[[i]]$prss_res$b, res_raps[[i]]$prss_res$se, res_raps[[i]]$prss_res$pval)
+    summary_results_raps <- rbind(summary_results_raps, vec)
+  }
+}
+write.csv(summary_results_raps, "compare_raps_20sim.csv")
+summary_results_raps_long <- data.frame(sim = c(rep(summary_results_raps$sim,2)), n_snps = c(rep(summary_results_raps$n_snps,2)), h2 = c(rep(summary_results_raps$h2,2)), frac_overlap = c(rep(summary_results_raps$frac_overlap,2)), Method = c(rep(summary_results_raps$method,2)), PRSS = c(rep("No",nrow(summary_results_raps)), rep("Yes",nrow(summary_results_raps))), nsnp = c(summary_results_raps$nsnp, summary_results_raps$nsnp_prss), b = c(summary_results_raps$b, summary_results_raps$b_prss), se = c(summary_results_raps$se, summary_results_raps$se_prss), pval = c(summary_results_raps$pval, summary_results_raps$pval_prss))
+write.csv(summary_results_raps_long, "compare_raps_20sim_long.csv")
+
 ################################################################################
 ################################################################################
 
@@ -217,7 +264,16 @@ for(i in 2:nrow(sim_params)){
 }
 summary_results_wc_med$scenario <- c(rep(scenarios, 5))
 
-summary_results_wc_all <- rbind(summary_results_wc_ivw, summary_results_wc_egger, summary_results_wc_med)
+summary_results_wc_raps <- data.frame(sim = res_raps[[1]]$params$sim, n_snps = res_raps[[1]]$params$n_snps, h2 = res_raps[[1]]$params$h2, frac_overlap = res_raps[[1]]$params$frac_overlap, method = res_raps[[1]]$orig_res$method, n_sig_snps = res_raps[[1]]$summary_wc$Quantities[1], per_over = res_raps[[1]]$summary_wc$Quantities[2], per_sig_over = res_raps[[1]]$summary_wc$Quantities[3], MSE = res_raps[[1]]$summary_wc$Quantities[4])
+for(i in 2:nrow(sim_params)){
+  if(is.null(res_raps[[i]]$prss_res) == FALSE){
+    vec <- c(res_raps[[i]]$params$sim, res_raps[[i]]$params$n_snps, res_raps[[i]]$params$h2, res_raps[[i]]$params$frac_overlap, res_raps[[i]]$orig_res$method, res_raps[[i]]$summary_wc$Quantities[1], res_raps[[i]]$summary_wc$Quantities[2], res_raps[[i]]$summary_wc$Quantities[3], res_raps[[i]]$summary_wc$Quantities[4])
+    summary_results_wc_raps <- rbind(summary_results_wc_raps, vec)
+  }
+}
+summary_results_wc_raps$scenario <- c(rep(scenarios, 5))
+
+summary_results_wc_all <- rbind(summary_results_wc_ivw, summary_results_wc_egger, summary_results_wc_med, summary_results_wc_raps)
 write.csv(summary_results_wc_all, "degreee_wc_20sim.csv")
 
 ################################################################################
