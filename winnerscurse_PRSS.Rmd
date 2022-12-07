@@ -223,7 +223,7 @@ In order to do this, we establish a suitable function, `sim_mr_ss` which simulat
 ```{r, message=FALSE, warning=FALSE}
 sim_mr_ss <- function(n_snps, h2, frac_overlap, n_x, n_y, cor_xy, beta_xy){
   n_overlap <- frac_overlap*min(n_x, n_y)
-  maf <- runif(n_snps, 0.01, 0.05)
+  maf <- runif(n_snps, 0.01, 0.5)
   index <- sample(1:n_snps, ceiling(n_snps), replace=FALSE) # random sampling
   beta_gx <- 0
   beta_gx[index] <- rnorm(length(index),0,1)
@@ -438,7 +438,7 @@ This function, `prss_2`, first takes a data frame or data table which must conta
 
 <br>
 
-In our proposed approach above, we use `n.iter = 100`. We will now test if increasing the number of iterations will improve our causal effect estimate and reduce the associated standard error. The corresponding values of our naive approach using the inverse variance weighted method are represented by the dashed <span style="color: #388E3C;">green</span> lines. Our current value, `n.iter = 100`, is denoted by the dotted black vertical line. In addition, in the first plot, the true causal effect of the exposure on the outcome of 0.3 is shown by the thick black horizontal line. With respect to improving the causal effect estimate, the plots demonstrate that increasing the number of iterations above 100 will likely not provide much additional benefit. For the standard error of the causal effect estimate, increasing the number of iterations would possibly reduce it further but this is not certain and it will still be more than 0.004 greater than the standard error of the *naive* approach. Therefore, for now, we will continue to use `n.iter = 100` as first suggested.
+In our proposed approach above, we use `n.iter = 100`. We will now test if increasing the number of iterations will improve our causal effect estimate and reduce the associated standard error. The corresponding values of our naive approach using the inverse variance weighted method are represented by the dashed <span style="color: #388E3C;">green</span> lines. Our current value, `n.iter = 100`, is denoted by the dotted black vertical line. In addition, in the first plot, the true causal effect of the exposure on the outcome of 0.3 is shown by the thick black horizontal line. With respect to improving the causal effect estimate, the plots demonstrate that increasing the number of iterations above 100 will likely not provide much additional benefit. For the standard error of the causal effect estimate, increasing the number of iterations would possibly reduce it further but this is not certain and it will still be more than 0.005 greater than the standard error of the *naive* approach. Therefore, for now, we will continue to use `n.iter = 100` as first suggested.
 
 
 ```{r, message=FALSE, warning=FALSE}
@@ -819,13 +819,15 @@ ggplot(res_100,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRS
 
 <span style="color: purple;">***Summary of results:***</span> 
 
-- A similar trend is observed for **IVW, Weighted median and MR RAPS** approaches. The **best results** for these three methods seem to occur when we have **fully overlapping** exposure and outcome data sets as for both methods, application of our approach results in an improvement in the causal effect estimate more than 90% of the time. Similar performance is also observed in the case of **no overlap**, especially for IVW and MR RAPS. However, when partial overlap is introduced in the form of 25% or 75%, a clear dilution in the effectiveness of our approach for these three methods is evident. Values greater than 50% are still being observed for improvement, however there are more cases in which our approach has resulted in causal effect estimates further from the true value. Finally, when overlap is at 50%, our approach performs very poorly for IVW, weighted median and MR RAPS with values of percentage of improvement as low as 33.75%, 26.25% and 26.25% respectively. This is a concerning result and perhaps is due to the additional variance introduced by our approach. Also, we note that it is known that the direction of weak instrument bias is towards the null when exposure and outcome samples are independent and towards the observed (confounded) estimate when there is complete sample overlap. Thus, naturally, there will be a point of overlap in which the bias acting in both directions will even out if you might say. We hypothesize that this is what is occurring at around 50% in our simulated examples.
+- A similar trend is observed for **IVW, Weighted median and MR RAPS** approaches. The **best results** for these three methods seem to occur when we have **fully overlapping** exposure and outcome data sets as for both methods, application of our approach results in an improvement in the causal effect estimate more than 85% of the time. Similar performance is also observed in the case of **no overlap**, especially for IVW and MR RAPS. However, when partial overlap is introduced in the form of 25% or 75%, a clear dilution in the effectiveness of our approach for these three methods is evident. Values greater than 50% are still being observed for improvement, however there are more cases in which our approach has resulted in causal effect estimates further from the true value. Finally, when overlap is at 50%, our approach performs very poorly for IVW, weighted median and MR RAPS with values of percentage of improvement as low as 38.75%, 31.25% and 22.5% respectively. This is a concerning result and perhaps is due to the additional variance introduced by our approach. Also, we note that it is known that the direction of weak instrument bias is towards the null when exposure and outcome samples are independent and towards the observed (confounded) estimate when there is complete sample overlap. Thus, naturally, there will be a point of overlap in which the bias acting in both directions will even out if you might say. We hypothesize that this is what is occurring at around 50% in our simulated examples.
 
-- There is an obvious contrast between the results obtained for **MR Egger** and those of the other three methods. The only instance in which the value for percentage of improvement is above 50% is when there is 50% overlap. In all other instance, our approach demonstrates **very poor performance**, with percentage of improvement as low as 7.5% when the exposure and outcomes data sets are fully overlapping. 
+- There is an obvious contrast between the results obtained for **MR Egger** and those of the other three methods. The only instance in which the value for percentage of improvement is above 50% is when there is 50% overlap. In all other instance, our approach demonstrates **very poor performance**, with percentage of improvement as low as 8.75% when the exposure and outcomes data sets are fully overlapping. 
 
 <br> 
 
 ### Confounding in opposite direction
+
+In this instance, we have ensured that confounding now occurs in the opposite direction. Thus, we have set $\rho = 0.15$, which is less than our causal effect of $0.3$. All other parameters are the same as above. The table below summarises the results obtained over all degrees of overlap. Following that, we break up our results into different percentages of overlap and provide depictions of these results in plots.  
 
 ```{r}
 res_ivw <- read.csv("compare_ivw_20sim_2.csv")
@@ -934,8 +936,6 @@ ggplot(res_100,aes(x=as.numeric(sim),y=as.numeric(b),colour=Method, linetype=PRS
 
 
 
-
-
 ## Poor performance of MR Egger
 
 In this section, we will attempt to answer one of the most pressing questions that have arose from our study so far:
@@ -944,7 +944,7 @@ In this section, we will attempt to answer one of the most pressing questions th
 In order to do so, we will focus on one of the data sets that was simulated, namely the first simulation using MR Egger in which there are 10000 causal SNPs, the heritability is 0.3 and there is no overlap between the outcome and exposure data sets. 
 
 ```{r}
-ss <- read.csv("bad_egger_example.csv")
+ss <- read.csv("bad_egger_example_2.csv")
 
 ## naive MR Egger approach
 ss %>% dplyr::filter(pval.exposure < 5e-8) %>% 
@@ -965,7 +965,7 @@ ggplot(res_all, aes(x=b, fill=method)) + geom_density(alpha=0.4) + geom_vline(ae
 ```
 
 
-Here, can see that the causal effect estimate obtained using our approach is much lower and much further away from the true value of 0.3 than the original MR Egger estimate (0.35525). This would suggest that on each iteration of our approach that poor causal effect estimates are being obtained. This can be seen in a more clear manner in our density plot where we see that the MR Egger estimates on each iteration are a lot more spread out and variable than those obtained with IVW and the weighted median. Thus, we could first investigate if MR Egger simply needs more iterations in order for it to perform better. 
+Here, can see that the causal effect estimate obtained using our approach is much lower and much further away from the true value of 0.3 than the original MR Egger estimate (0.3547665). This would suggest that on each iteration of our approach that poor causal effect estimates are being obtained. This can be seen in a more clear manner in our density plot where we see that the MR Egger estimates on each iteration are a lot more spread out and variable than those obtained with IVW and the weighted median. Thus, we could first investigate if MR Egger simply needs more iterations in order for it to perform better. 
 
 
 ```{r, message=FALSE, warning=FALSE}
@@ -990,13 +990,13 @@ ggplot(summary,aes(x=n.iter,y=se)) + geom_point(size=2) + xlab("No. of iteration
     
 ```
 
-In the plot above, the corresponding values of our naive approach using the MR Egger method are represented by the dashed <span style="color: #E67E22;">orange</span> lines. Our current value, `n.iter = 100`, is denoted by the dotted black vertical line. In addition, in the first plot, the true causal effect of the exposure on the outcome of 0.3 is shown by the thick black horizontal line. We note that the standard error will still be larger than the original unadjusted form of the matter regardless of the number of iterations. With respect to the causal effect estimate, increasing the number of iterations does seem to move the causal effect estimate closer to the true value of 0.3. However, after 1000 iterations, the estimate is only 0.2298, which is still further from 0.3 than the effect estimate of the original MR Egger method. Therefore, increasing the number of iterations does not solve the problem at hand. 
+In the plot above, the corresponding values of the naive approach using the MR Egger method are represented by the dashed <span style="color: #E67E22;">orange</span> lines. The current value of our approach, `n.iter = 100`, is denoted by the dotted black vertical line. In addition, in the first plot, the true causal effect of the exposure on the outcome of 0.3 is shown by the thick black horizontal line. With respect to the causal effect estimate, increasing the number of iterations does seem to move the causal effect estimate closer to the true value of 0.3. However, after 1000 iterations, the estimate is only 0.242466, which is still very slightly further from 0.3 than the effect estimate of the original MR Egger method. Therefore, increasing the number of iterations does not solve the problem at hand. 
 
 
 We will investigate this thoroughly for one iteration, first producing the summary of the linear model coefficients we get when we use the MR Egger approach: 
 
 ```{r}
-set.seed(1998)
+set.seed(1996)
 ## code for our method
 data <- ss
 data$maf <- data$eaf.exposure
@@ -1057,7 +1057,7 @@ The above summaries can be depicted in the plot below in which the dashed <span 
 ```{r}
 data_flip <- data.frame(beta.exposure = b_exp, beta.outcome = b_out, se_out = se_out)
 
-ggplot(data_flip, aes(x=beta.exposure, y=beta.outcome)) + geom_point() + geom_abline(intercept = 0, slope = 0.3, size=1) + geom_abline(intercept = 0, slope = 0.30800, colour="#388E3C", linetype="dashed", size=1) + geom_abline(intercept = 0.02185, slope = -0.03032, colour="#E67E22", linetype="dashed", size=1) + xlim(c(0,0.1)) 
+ggplot(data_flip, aes(x=beta.exposure, y=beta.outcome)) + geom_point() + geom_abline(intercept = 0, slope = 0.3, size=1) + geom_abline(intercept = 0, slope = 0.2752952, colour="#388E3C", linetype="dashed", size=1) + geom_abline(intercept = 0.002435516, slope = 0.248524083, colour="#E67E22", linetype="dashed", size=1) 
 ```
 
 
@@ -1067,8 +1067,6 @@ ggplot(data_flip, aes(x=beta.exposure, y=beta.outcome)) + geom_point() + geom_ab
 <span style="color: #C21B1E;">**Question:** ***Does our approach introduce more weak instrument bias?***</span>
 
 
-
-Discussion of NoME and regression dilution bias - could poor MR Egger performance be improved with SIMEX? 
 
 
 ```{r}
@@ -1165,7 +1163,6 @@ ggplot(results_Isq,aes(x=ave_f, fill=method)) + geom_density(alpha=0.4) + xlab("
 
 
 
-implementation of mr_raps?? how can I do this and where do I start?? 
 
 
 

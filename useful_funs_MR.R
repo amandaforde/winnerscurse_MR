@@ -18,7 +18,7 @@
 
 sim_mr_ss <- function(n_snps, h2, frac_overlap, n_x, n_y, cor_xy, beta_xy){
   n_overlap <- frac_overlap*min(n_x, n_y)
-  maf <- runif(n_snps, 0.01, 0.05)
+  maf <- runif(n_snps, 0.01, 0.5)
   index <- sample(1:n_snps, ceiling(n_snps), replace=FALSE) # random sampling
   beta_gx <- 0
   beta_gx[index] <- rnorm(length(index),0,1)
