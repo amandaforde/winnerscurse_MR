@@ -4,17 +4,13 @@ title: "Removing Winner's Curse bias in two-sample Mendelian randomisation with 
 author: "Amanda Forde"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  word_document:
-    toc: yes
   html_document:
     toc: yes
     df_print: paged
   html_notebook:
     toc: yes
-  pdf_document:
-    toc: yes
-editor_options:
-  markdown:
+editor_options: 
+  markdown: 
     wrap: 72
 ---
 
@@ -61,13 +57,16 @@ Therefore, in order to perform this method, we must first establish the
 (asymptotic) conditional distribution of:
 $$\begin{pmatrix} \hat \beta_{X1_\pi} \\ \hat \beta_{Y1_\pi} \end{pmatrix} \Bigl \lvert \begin{pmatrix} \hat \beta_{X1} \\ \hat \beta_{Y1} \end{pmatrix}$$
 
-***Note:*** We have referred to our estimators of interest as
+[$\star$]{style="color: blue;"} **Note:** We have referred to our estimators of interest as
 $\hat\beta_{X1}$ and $\hat\beta_{Y1}$, instead of simply $\hat\beta_{X}$
 and $\hat\beta_{Y}$, to ensure clarity in our proof below. In the proof,
 we will be dealing with linear regression in matrix form and
 $\hat\beta_X$ will refer to a vector of length 2 in which the first
 entry will be $\hat\beta_{X0}$ and the second entry will be
 $\hat\beta_{X1}$, our estimator of interest.
+
+[$\star$]{style="color: blue;"} **Note:** It is important to mention that the relationships, $\hat\beta_{X1} = \pi\hat \beta_{X1_\pi} + (1-\pi)\hat \beta_{X1_{1-\pi}}$ and $\hat\beta_{Y1} = \pi\hat \beta_{Y1_\pi} + (1-\pi)\hat \beta_{Y1_{1-\pi}}$, mentioned above, are in fact only ***approximate***, to order $\frac{1}{N_X}$ and $\frac{1}{N_Y}$ respectively where $N_X$ and $N_Y$ are the sample sizes of the exposure and outcome data sets, and hold because maximum likelihood estimates are ***asymptotically linear***. 
+
 
 <br>
 
@@ -510,4 +509,164 @@ $$
 [$\star$]{style="color: blue;"} **Cubic equation for $\lambda$?**
 
 
+In the following example, we will use our work above to obtain an estimate for $\lambda$ using simulated data. First, we establish a function to simulate data, `sim_mr_stats`.
 
+
+```{r}
+sim_mr_stats <- function(n_snps, prop_effect, h2, frac_overlap, n_x, n_y, cor_xy, beta_xy){
+  n_overlap <- frac_overlap*min(n_x, n_y)
+  maf <- runif(n_snps, 0.01, 0.5)
+  effect_snps <- n_snps*prop_effect
+  index <- sample(1:n_snps, ceiling(effect_snps), replace=FALSE) # random sampling
+  beta_gx <- rep(0,n_snps)
+  beta_gx[index] <- rnorm(length(index),0,1)
+
+  var_x <- sum(2*maf*(1-maf)*beta_gx^2)/h2
+  if(var_x != 0){beta_gx <- beta_gx/sqrt(var_x)} # scaling to represent an exposure with variance 1
+  beta_gy <- beta_gx * beta_xy
+
+  var_gx <- 1/(n_x*2*maf*(1-maf)) # var(X)=1
+  var_gy <- 1/(n_y*2*maf*(1-maf)) # var(Y)=1
+  cov_gx_gy <- ((n_overlap*cor_xy)/(n_x*n_y))*(1/(2*maf*(1-maf)))
+
+  # create covariance matrix for each SNP
+  cov_array <- array(dim=c(2, 2, n_snps))
+  cov_array[1,1,] <- var_gx
+  cov_array[2,1,] <- cov_gx_gy
+  cov_array[1,2,] <- cov_array[2,1,]
+  cov_array[2,2,] <- var_gy
+
+  summary_stats <- apply(cov_array, 3, function(x){MASS::mvrnorm(n=1, mu=c(0,0), Sigma=x)})
+  summary_stats <- t(summary_stats + rbind(beta_gx, beta_gy))
+
+  data <- tibble(
+    SNP = 1:n_snps,
+    beta.exposure = summary_stats[,1],
+    beta.outcome = summary_stats[,2],
+    se.exposure = sqrt(var_gx),
+    se.outcome = sqrt(var_gy),
+    true.exposure = beta_gx,
+    true.outcome = beta_gy
+  )
+
+  return(data)
+}
+
+
+```
+
+
+
+We now use the function, `mr_sim_stats`, to simulate sets of summary statistics with different proportions of effect SNPs. We anticipate that solving the above cubic equation for $\lambda$ or alternatively, optimising the ***log-likelihood function*** for $\lambda$, will become less accurate at estimating $\lambda$ as the proportion of effect SNPs increases. This is due to the increased violation of our **assumption** that $\beta_{X_i} = 0$ and $\beta_{Y_i} = 0$ for $i=1,...,n$. Note that as the roots of the cubic equation can be both real and imaginary, we will focus on using the function `optimise` to optimise the ***log-likelihood function*** rather than solving the cubic equation. In all examples below, the fraction of overlap is 1 between the exposure and outcome samples and therefore, the true value for $\lambda$ is equal to the correlation between the exposure, $X$ and outcome, $Y$ which has been set to 0.6.
+
+```{r}
+set.seed(1998)
+
+## prop_effect = 0
+data <- sim_mr_stats(10^5,0,0.4,1,50000,50000,0.6,0.3) 
+n <- nrow(data)
+B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
+A <- sum((data$beta.exposure/data$se.exposure)^2) 
+C <- sum((data$beta.outcome/data$se.outcome)^2)
+f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
+optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
+
+
+## prop_effect = 0.25
+data <- sim_mr_stats(10^5,0.25,0.4,1,50000,50000,0.6,0.3) 
+n <- nrow(data)
+B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
+A <- sum((data$beta.exposure/data$se.exposure)^2) 
+C <- sum((data$beta.outcome/data$se.outcome)^2)
+f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
+optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
+
+
+## prop_effect = 0.5
+data <- sim_mr_stats(10^5,0.5,0.4,1,50000,50000,0.6,0.3) 
+n <- nrow(data)
+B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
+A <- sum((data$beta.exposure/data$se.exposure)^2) 
+C <- sum((data$beta.outcome/data$se.outcome)^2)
+## optimise log-likelihood
+f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
+optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
+
+
+## prop_effect = 0.75
+data <- sim_mr_stats(10^5,0.75,0.4,1,50000,50000,0.6,0.3) 
+n <- nrow(data)
+B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
+A <- sum((data$beta.exposure/data$se.exposure)^2) 
+C <- sum((data$beta.outcome/data$se.outcome)^2)
+## optimise log-likelihood
+f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
+optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
+
+```
+
+
+It is clear to see that, as anticipated, as more non-null effect SNPs are included in our calculations, bias is introduced into our estimate of $\lambda$. Therefore, in order to counteract this, we must select SNPs based on their $z$-values and perform our calculations with just these SNPs. We repeat the last example above but just with those SNPs in which their absolute $z$-values for both exposure and outcome are less than 0.5. It can be seen below that the correlation estimate is now extremely upward biased, indicating that our log-likelihood expression must then take into account this selection process. 
+
+```{r}
+## prop_effect = 0.75
+data <- sim_mr_stats(10^5,0.5,0.4,1,50000,50000,0.6,0.3) 
+data <- data[abs(data$beta.exposure/data$se.exposure) < 0.5 & abs(data$beta.outcome/data$se.outcome) < 0.5,]
+n <- nrow(data)
+B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
+A <- sum((data$beta.exposure/data$se.exposure)^2) 
+C <- sum((data$beta.outcome/data$se.outcome)^2)
+## optimise log-likelihood
+f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
+optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
+```
+
+
+How do we establish this new log-likelihood expression? 
+
+
+
+conditional likelihood - cumulative distribution function:
+assume $\sigma_{X_i}$ and $\sigma_{Y_i}$ are known, and $\beta_{X_i} = \beta_{Y_i} = 0$
+
+$$f\left( |z_{X_i}| < 0.5, |z_{Y_i}| < 0.5 \right) = \frac{1}{2\pi\sqrt{1-\lambda^2}\sigma_{X_i}\sigma_{Y_i}} \int^{0.5}_{-0.5} \int^{0.5}_{-0.5} e^{ -\frac{1}{2(1-\lambda^2)} \left[ \left( z_{X_i}\right)^2 - 2\lambda\left(z_{X_i}\right)\left(z_{Y_i}\right) + \left( z_{Y_i}\right)^2\right]} dz_{X_i} dz_{Y_i}$$
+
+
+Is our desired likelihood expression the following then?
+
+$$
+\begin{aligned}
+L\left( \lambda | \bf{\hat\beta_X, \hat\beta_Y, \sigma_X, \sigma_Y} \right) &= \frac{\Pi_{i=1}^{n}f\left( \hat \beta_{X_i}, \hat \beta_{Y_i} \right)}{\left[ f\left( |z_{X_i}| < 0.5, |z_{Y_i}| < 0.5 \right)\right]^n} \\ &=  \frac{e^{-\frac{1}{2(1-\lambda^2)}\left[ \sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)^2 -2\lambda\sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] + \sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)^2\right]}}{\left[ \int^{0.5}_{-0.5} \int^{0.5}_{-0.5} e^{ -\frac{1}{2(1-\lambda^2)} \left[ \left( z_{X_i}\right)^2 - 2\lambda\left(z_{X_i}\right)\left(z_{Y_i}\right) + \left( z_{Y_i}\right)^2\right]} dz_{X_i} dz_{Y_i}\right]^n}
+\end{aligned}
+$$
+
+
+
+Taking the log-likelihood:
+
+$$
+l\left( \lambda \right) = {-\frac{1}{2(1-\lambda^2)}\left[ \sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)^2 -2\lambda\sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] + \sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)^2\right]}- n \cdot \log \left[ \int^{0.5}_{-0.5} \int^{0.5}_{-0.5} e^{ -\frac{1}{2(1-\lambda^2)} \left[ \left( z_{X_i}\right)^2 - 2\lambda\left(z_{X_i}\right)\left(z_{Y_i}\right) + \left( z_{Y_i}\right)^2\right]} dz_{X_i} dz_{Y_i}\right]
+$$
+
+
+
+```{r}
+library(pracma)
+
+data <- sim_mr_stats(10^5,0.5,0.4,1,50000,50000,0.6,0.3) 
+data <- data[abs(data$beta.exposure/data$se.exposure) < 0.5 & abs(data$beta.outcome/data$se.outcome) < 0.5,]
+n <- nrow(data)
+B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
+A <- sum((data$beta.exposure/data$se.exposure)^2) 
+C <- sum((data$beta.outcome/data$se.outcome)^2)
+
+fun_obj <- function(lambda){
+ - ((1)/(2*(1-lambda^2)))*(A-2*lambda*B+C) - n*log((pracma::integral2(function(x,y) 
+  exp((-(1)/(2*(1-lambda^2)))*(x^2-2*lambda*x*y+y^2)),
+  xmin = -0.5,xmax = 0.5, ymin = -0.5, ymax = 0.5)$Q))
+} 
+
+solution <- optimize(fun_obj, interval=c(-1,1),maximum=TRUE)$maximum
+solution
+
+```
