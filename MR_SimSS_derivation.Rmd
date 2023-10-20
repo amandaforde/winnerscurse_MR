@@ -20,7 +20,7 @@ Source:
 ```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 library(dplyr)
-library(TwoSampleMR)
+#library(TwoSampleMR)
 library(ggplot2)
 library(patchwork)
 library(ggpubr)
@@ -57,16 +57,23 @@ Therefore, in order to perform this method, we must first establish the
 (asymptotic) conditional distribution of:
 $$\begin{pmatrix} \hat \beta_{X1_\pi} \\ \hat \beta_{Y1_\pi} \end{pmatrix} \Bigl \lvert \begin{pmatrix} \hat \beta_{X1} \\ \hat \beta_{Y1} \end{pmatrix}$$
 
-[$\star$]{style="color: blue;"} **Note:** We have referred to our estimators of interest as
-$\hat\beta_{X1}$ and $\hat\beta_{Y1}$, instead of simply $\hat\beta_{X}$
-and $\hat\beta_{Y}$, to ensure clarity in our proof below. In the proof,
-we will be dealing with linear regression in matrix form and
-$\hat\beta_X$ will refer to a vector of length 2 in which the first
-entry will be $\hat\beta_{X0}$ and the second entry will be
-$\hat\beta_{X1}$, our estimator of interest.
+[$\star$]{style="color: blue;"} **Note:** We have referred to our
+estimators of interest as $\hat\beta_{X1}$ and $\hat\beta_{Y1}$, instead
+of simply $\hat\beta_{X}$ and $\hat\beta_{Y}$, to ensure clarity in our
+proof below. In the proof, we will be dealing with linear regression in
+matrix form and $\hat\beta_X$ will refer to a vector of length 2 in
+which the first entry will be $\hat\beta_{X0}$ and the second entry will
+be $\hat\beta_{X1}$, our estimator of interest.
 
-[$\star$]{style="color: blue;"} **Note:** It is important to mention that the relationships, $\hat\beta_{X1} = \pi\hat \beta_{X1_\pi} + (1-\pi)\hat \beta_{X1_{1-\pi}}$ and $\hat\beta_{Y1} = \pi\hat \beta_{Y1_\pi} + (1-\pi)\hat \beta_{Y1_{1-\pi}}$, mentioned above, are in fact only ***approximate***, to order $\frac{1}{N_X}$ and $\frac{1}{N_Y}$ respectively where $N_X$ and $N_Y$ are the sample sizes of the exposure and outcome data sets, and hold because maximum likelihood estimates are ***asymptotically linear***. 
-
+[$\star$]{style="color: blue;"} **Note:** It is important to mention
+that the relationships,
+$\hat\beta_{X1} = \pi\hat \beta_{X1_\pi} + (1-\pi)\hat \beta_{X1_{1-\pi}}$
+and
+$\hat\beta_{Y1} = \pi\hat \beta_{Y1_\pi} + (1-\pi)\hat \beta_{Y1_{1-\pi}}$,
+mentioned above, are in fact only ***approximate***, to order
+$\frac{1}{N_X}$ and $\frac{1}{N_Y}$ respectively where $N_X$ and $N_Y$
+are the sample sizes of the exposure and outcome data sets, and hold
+because maximum likelihood estimates are ***asymptotically linear***.
 
 <br>
 
@@ -418,49 +425,80 @@ distribution:
 
 $$ \left( \begin{pmatrix} \hat \beta_{X1_\pi} \\ \hat \beta_{Y1_\pi} \end{pmatrix} \Bigl \lvert \begin{pmatrix} \hat \beta_{X1} \\ \hat \beta_{Y1} \end{pmatrix} \right) \sim N\left( \begin{pmatrix} \hat\beta_{X1}  \\ \hat\beta_{Y1} \end{pmatrix}, \left( \frac{1-\pi}{\pi}\right) \cdot \frac{1}{2\text{maf}_i(1-\text{maf}_i)}\begin{pmatrix} \frac{1}{N_X} & \frac{N_{\text{overlap}}\rho}{N_XN_Y}\\ \frac{N_{\text{overlap}}\rho}{N_XN_Y} & \frac{1}{N_Y} \end{pmatrix}\right)$$
 
-<br> 
+<br>
 
-***Note:*** The above expression holds in the case that $\text{var}(X) = \text{var}(Y) = 1$, as stated above. Let us briefly consider how we could rewrite this expression if it is ***not*** the case that $\text{var}(X) = \text{var}(Y) = 1$. Firstly, our expression would now have to include $\text{var}(X)$ and $\text{var(Y)}$ as follows:
+***Note:*** The above expression holds in the case that
+$\text{var}(X) = \text{var}(Y) = 1$, as stated above. Let us briefly
+consider how we could rewrite this expression if it is ***not*** the
+case that $\text{var}(X) = \text{var}(Y) = 1$. Firstly, our expression
+would now have to include $\text{var}(X)$ and $\text{var(Y)}$ as
+follows:
 
 $$ \left( \begin{pmatrix} \hat \beta_{X1_\pi} \\ \hat \beta_{Y1_\pi} \end{pmatrix} \Bigl \lvert \begin{pmatrix} \hat \beta_{X1} \\ \hat \beta_{Y1} \end{pmatrix} \right) \sim N\left( \begin{pmatrix} \hat\beta_{X1}  \\ \hat\beta_{Y1} \end{pmatrix}, \left( \frac{1-\pi}{\pi}\right) \cdot \frac{1}{2\text{maf}_i(1-\text{maf}_i)}\begin{pmatrix} \frac{\text{var}(X)}{N_X} & \frac{N_{\text{overlap}}\rho\sqrt{\text{var}(X)\text{var}(Y)}}{N_XN_Y}\\ \frac{N_{\text{overlap}}\rho\sqrt{\text{var}(X)\text{var}(Y)}}{N_XN_Y} & \frac{\text{var}(Y)}{N_Y} \end{pmatrix}\right)$$
 
-However, it is possible to write this in another form in which we make use of the fact that we already have estimates for $\text{se}\left(\hat \beta_{X1}\right)$ and $\text{se}\left(\hat \beta_{Y1}\right)$. We note the following:
+However, it is possible to write this in another form in which we make
+use of the fact that we already have estimates for
+$\text{se}\left(\hat \beta_{X1}\right)$ and
+$\text{se}\left(\hat \beta_{Y1}\right)$. We note the following:
 
-i. As $\text{var}(\hat \beta_{X1}) \sim \frac{\text{var}(X)}{N_X\cdot 2\text{maf}_i(1-\text{maf}_i)}$, then $\left(\text{se}(\hat \beta_{X1})\right)^2 \sim \frac{\text{var}(X)}{N_X\cdot 2\text{maf}_i(1-\text{maf}_i)}$.
+i.  As
+    $\text{var}(\hat \beta_{X1}) \sim \frac{\text{var}(X)}{N_X\cdot 2\text{maf}_i(1-\text{maf}_i)}$,
+    then
+    $\left(\text{se}(\hat \beta_{X1})\right)^2 \sim \frac{\text{var}(X)}{N_X\cdot 2\text{maf}_i(1-\text{maf}_i)}$.
 
-ii. As $\text{var}(\hat \beta_{Y1}) \sim \frac{\text{var}(Y)}{N_Y\cdot 2\text{maf}_i(1-\text{maf}_i)}$, then $\left(\text{se}(\hat \beta_{Y1})\right)^2 \sim \frac{\text{var}(Y)}{N_Y\cdot 2\text{maf}_i(1-\text{maf}_i)}$.
+ii. As
+    $\text{var}(\hat \beta_{Y1}) \sim \frac{\text{var}(Y)}{N_Y\cdot 2\text{maf}_i(1-\text{maf}_i)}$,
+    then
+    $\left(\text{se}(\hat \beta_{Y1})\right)^2 \sim \frac{\text{var}(Y)}{N_Y\cdot 2\text{maf}_i(1-\text{maf}_i)}$.
 
 iii. $\text{se}\left(\hat \beta_{X1}\right) \cdot \text{se}\left(\hat \beta_{Y1}\right) = \sqrt{\frac{\text{var}(X)}{N_X\cdot 2\text{maf}_i(1-\text{maf}_i)}}\cdot \sqrt{\frac{\text{var}(Y)}{N_Y\cdot 2\text{maf}_i(1-\text{maf}_i)}} = \frac{1}{2\text{maf}_i(1-\text{maf}_i)} \frac{\sqrt{\text{var}(X)\text{var}(Y)}}{\sqrt{N_X N_Y}}$
 
-Putting all of the above together, we obtain an alternative form of the required conditional distribution:
+Putting all of the above together, we obtain an alternative form of the
+required conditional distribution:
 
 $$ \left( \begin{pmatrix} \hat \beta_{X1_\pi} \\ \hat \beta_{Y1_\pi} \end{pmatrix} \Bigl \lvert \begin{pmatrix} \hat \beta_{X1} \\ \hat \beta_{Y1} \end{pmatrix} \right) \sim N\left( \begin{pmatrix} \hat\beta_{X1}  \\ \hat\beta_{Y1} \end{pmatrix}, \left( \frac{1-\pi}{\pi}\right) \begin{pmatrix} \left(\text{se}\left(\hat \beta_{X1}\right)\right)^2 & \text{se}\left(\hat \beta_{X1}\right) \text{se}\left(\hat \beta_{Y1}\right) \frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}}\\ \text{se}\left(\hat \beta_{X1}\right) \text{se}\left(\hat \beta_{Y1}\right) \frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}} & \left(\text{se}\left(\hat \beta_{Y1}\right)\right)^2 \end{pmatrix}\right)$$
 
-
 <br><br>
 
+### Estimating Correlation
 
-**NEXT STEP:**
+Ideally, we would like to be able to use our method when only summary
+statistics are available, i.e. we only have information on
+$\hat\beta_{X_i}$, $\hat\beta_{Y_i}$, $\text{se}(\hat\beta_{X_i})$ and
+$\text{se}(\hat\beta_{Y_i})$ for each SNP $i$. Therefore, in the
+equation above, we would need to estimate a value for
+$\frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}}$.
 
-Ideally, we would like to be able to use our method when only summary statistics are available, i.e. we only have information on $\hat\beta_{X_i}$, $\hat\beta_{Y_i}$, $\text{se}(\hat\beta_{X_i})$ and $\text{se}(\hat\beta_{Y_i})$ for each SNP $i$. Therefore, in the equation above, we would need to estimate a value for $\frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}}$. 
+[$\star$]{style="color: blue;"} **Note:** From here, we will denote
+$\hat\beta_{X1}$ for SNP $i$ simply by $\hat\beta_{X_i}$ and similarly,
+$\hat\beta_{Y1}$ for SNP $i$ will be represented by $\hat\beta_{Y_i}$.
 
-[$\star$]{style="color: blue;"} **Note:** From here, we will denote $\hat\beta_{X1}$ for SNP $i$ simply by $\hat\beta_{X_i}$ and similarly, $\hat\beta_{Y1}$ for SNP $i$ will be represented by $\hat\beta_{Y_i}$. 
-
-In a similar form to the expression above, we assume for each SNP $i$ that $\hat\beta_{X_i}$ and $\hat\beta_{Y_i}$ follow the following bivariate normal distribution: 
+In a similar form to the expression above, we assume for each SNP $i$
+that $\hat\beta_{X_i}$ and $\hat\beta_{Y_i}$ follow the following
+bivariate normal distribution:
 
 $$  \begin{pmatrix} \hat \beta_{X_i} \\ \hat \beta_{Y_i} \end{pmatrix} \sim N\left( \begin{pmatrix} \beta_{X_i}  \\ \beta_{Y_i} \end{pmatrix}, \begin{pmatrix} \left(\text{se}\left(\hat \beta_{X_i}\right)\right)^2 & \text{se}\left(\hat \beta_{X_i}\right) \text{se}\left(\hat \beta_{Y_i}\right) \frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}}\\ \text{se}\left(\hat \beta_{X_i}\right) \text{se}\left(\hat \beta_{Y_i}\right) \frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}} & \left(\text{se}\left(\hat \beta_{Y_i}\right)\right)^2 \end{pmatrix}\right)$$
 
-
-For convenience, let us represent $\frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}}$ by $\lambda$ as this is the value we are interested in estimating. Thus $\lambda$ is essentially equivalent to the correlation between $\hat\beta_{X_i}$ and $\hat\beta_{Y_i}$ for each SNP $i$. In addition, we let $\text{se}(\hat\beta_{X_i}) \approx \sigma_{X_i}$ and $\text{se}(\hat\beta_{Y_i}) \approx \sigma_{Y_i}$. The bivariate normal distribution then takes the simpler form of: 
+For convenience, let us represent
+$\frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}}$ by $\lambda$ as this is
+the value we are interested in estimating. Thus $\lambda$ is essentially
+equivalent to the correlation between $\hat\beta_{X_i}$ and
+$\hat\beta_{Y_i}$ for each SNP $i$. In addition, we let
+$\text{se}(\hat\beta_{X_i}) \approx \sigma_{X_i}$ and
+$\text{se}(\hat\beta_{Y_i}) \approx \sigma_{Y_i}$. The bivariate normal
+distribution then takes the simpler form of:
 
 $$  \begin{pmatrix} \hat \beta_{X_i} \\ \hat \beta_{Y_i} \end{pmatrix} \sim N\left( \begin{pmatrix} \beta_{X_i}  \\ \beta_{Y_i} \end{pmatrix}, \begin{pmatrix} \left(\sigma_{X_i}\right)^2 & \sigma_{X_i} \sigma_{Y_i} \lambda \\ \sigma_{X_i} \sigma_{Y_i} \lambda & \left(\sigma_{Y_i}\right)^2 \end{pmatrix}\right)$$
 
-Given this, the corresponding ***probability density function*** for each SNP $i$ can be written as:
+Given this, the corresponding ***probability density function*** for
+each SNP $i$ can be written as:
 
 $$f\left( \hat \beta_{X_i}, \hat \beta_{Y_i} \right) = \frac{1}{2\pi\sqrt{1-\lambda^2}\sigma_{X_i}\sigma_{Y_i}}e^{ -\frac{1}{2(1-\lambda^2)} \left[ \left( \frac{\hat \beta_{X_i} - \beta_{X_i}}{\sigma_{X_i}}\right)^2 - 2\lambda\left(\frac{\hat \beta_{X_i} - \beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat \beta_{Y_i} - \beta_{Y_i}}{\sigma_{Y_i}}\right) + \left( \frac{\hat \beta_{Y_i} - \beta_{Y_i}}{\sigma_{Y_i}}\right)^2\right]}$$
 
-
-Thus, we can form a likelihood function for $\lambda$ for a set of $n$ SNPs, $\left(\hat\beta_{X_i}, \hat\beta_{Y_i}, \sigma_{X_i}, \sigma_{Y_i}\right)$, $i=1,...,n$:
+Thus, we can form a likelihood function for $\lambda$ for a set of $n$
+SNPs,
+$\left(\hat\beta_{X_i}, \hat\beta_{Y_i}, \sigma_{X_i}, \sigma_{Y_i}\right)$,
+$i=1,...,n$:
 
 $$
 \begin{aligned}
@@ -468,26 +506,30 @@ L\left( \lambda | \bf{\hat\beta_X, \hat\beta_Y, \sigma_X, \sigma_Y} \right) &= \
 \end{aligned}
 $$
 
+where
+$\hat\beta_X = (\hat\beta_{X_1},...,\hat\beta_{X_n}), \hat\beta_Y = (\hat\beta_{Y_1},...,\hat\beta_{Y_n}), \sigma_X = (\sigma_{X_1},...,\sigma_{X_n})$
+and $\sigma_Y = (\sigma_{Y_1},...,\sigma_{Y_n})$, the observed values
+for each SNP.
 
-where $\hat\beta_X = (\hat\beta_{X_1},...,\hat\beta_{X_n}), \hat\beta_Y = (\hat\beta_{Y_1},...,\hat\beta_{Y_n}), \sigma_X = (\sigma_{X_1},...,\sigma_{X_n})$ and $\sigma_Y = (\sigma_{Y_1},...,\sigma_{Y_n})$, the observed values for each SNP.
-
-
-The ***log-likelihood function*** for $\lambda$,  $\text{log}L(\lambda) = l(\lambda)$ can then be derived as follows:
+The ***log-likelihood function*** for $\lambda$,
+$\text{log}L(\lambda) = l(\lambda)$ can then be derived as follows:
 
 $$
 l\left( \lambda \right) = -n \text{log}(2\pi) - \frac{n}{2}\text{log}(1-\lambda^2) - \text{log}(\Pi_{i=1}^{n}\left(\sigma_{X_i}\sigma_{Y_i}\right)) - \frac{1}{2(1-\lambda^2)}\left[ \sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}-\beta_{X_i}}{\sigma_{X_i}}\right)^2 -2\lambda\sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}-\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}-\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] + \sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}-\beta_{Y_i}}{\sigma_{Y_i}}\right)^2\right]
 $$
 
+[$\star$]{style="color: blue;"} **Assumption:** If assume that
+$\beta_{X_i} = 0$ and $\beta_{Y_i} = 0$ for $i=1,...,n$, we can then
+denote the following constants by letters to simplify our derivations:
 
-[$\star$]{style="color: blue;"} **Assumption:** If assume that $\beta_{X_i} = 0$ and $\beta_{Y_i} = 0$ for $i=1,...,n$, we can then denote the following constants by letters to simplify our derivations:
+-   $\sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}-\beta_{X_i}}{\sigma_{X_i}}\right)^2 = \sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)^2 = A$
+-   $\sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}-\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}-\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] = \sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] = B$
+-   $\sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}-\beta_{Y_i}}{\sigma_{Y_i}}\right)^2 = \sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)^2 = C$
 
-- $\sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}-\beta_{X_i}}{\sigma_{X_i}}\right)^2 = \sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)^2 = A$
-- $\sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}-\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}-\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] = \sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] = B$
-- $\sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}-\beta_{Y_i}}{\sigma_{Y_i}}\right)^2 = \sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)^2 = C$
-
-
-In order to find the ***maximum likelihood estimate*** (MLE) for $\lambda$, we must first obtain an expression for $\frac{d}{d\lambda}l(\lambda)$ and then solve equal to zero. Using our defined constants $A$, $B$ and $C$ above, we proceed as follows:
-
+In order to find the ***maximum likelihood estimate*** (MLE) for
+$\lambda$, we must first obtain an expression for
+$\frac{d}{d\lambda}l(\lambda)$ and then solve equal to zero. Using our
+defined constants $A$, $B$ and $C$ above, we proceed as follows:
 
 $$
 \begin{aligned}
@@ -496,9 +538,10 @@ $$
 \end{aligned}
 $$
 
-in which we have let $\tilde{A} = \frac{A}{n}, \tilde{B} = \frac{B}{n}$ and $\tilde{C} = \frac{C}{n}$.
+in which we have let $\tilde{A} = \frac{A}{n}, \tilde{B} = \frac{B}{n}$
+and $\tilde{C} = \frac{C}{n}$.
 
-Solving the above equation equal to zero gives the following: 
+Solving the above equation equal to zero gives the following:
 
 $$
 \begin{aligned}
@@ -506,11 +549,11 @@ $$
 \end{aligned}
 $$
 
-[$\star$]{style="color: blue;"} **Cubic equation for $\lambda$?**
+[$\star$]{style="color: blue;"} **Cubic equation for** $\lambda$?
 
-
-In the following example, we will use our work above to obtain an estimate for $\lambda$ using simulated data. First, we establish a function to simulate data, `sim_mr_stats`.
-
+In the following example, we will use our work above to obtain an
+estimate for $\lambda$ using simulated data. First, we establish a
+function to simulate data, `sim_mr_stats`.
 
 ```{r}
 sim_mr_stats <- function(n_snps, prop_effect, h2, frac_overlap, n_x, n_y, cor_xy, beta_xy){
@@ -520,7 +563,6 @@ sim_mr_stats <- function(n_snps, prop_effect, h2, frac_overlap, n_x, n_y, cor_xy
   index <- sample(1:n_snps, ceiling(effect_snps), replace=FALSE) # random sampling
   beta_gx <- rep(0,n_snps)
   beta_gx[index] <- rnorm(length(index),0,1)
-
   var_x <- sum(2*maf*(1-maf)*beta_gx^2)/h2
   if(var_x != 0){beta_gx <- beta_gx/sqrt(var_x)} # scaling to represent an exposure with variance 1
   beta_gy <- beta_gx * beta_xy
@@ -528,7 +570,6 @@ sim_mr_stats <- function(n_snps, prop_effect, h2, frac_overlap, n_x, n_y, cor_xy
   var_gx <- 1/(n_x*2*maf*(1-maf)) # var(X)=1
   var_gy <- 1/(n_y*2*maf*(1-maf)) # var(Y)=1
   cov_gx_gy <- ((n_overlap*cor_xy)/(n_x*n_y))*(1/(2*maf*(1-maf)))
-
   # create covariance matrix for each SNP
   cov_array <- array(dim=c(2, 2, n_snps))
   cov_array[1,1,] <- var_gx
@@ -548,20 +589,28 @@ sim_mr_stats <- function(n_snps, prop_effect, h2, frac_overlap, n_x, n_y, cor_xy
     true.exposure = beta_gx,
     true.outcome = beta_gy
   )
-
   return(data)
 }
 
-
 ```
 
-
-
-We now use the function, `mr_sim_stats`, to simulate sets of summary statistics with different proportions of effect SNPs. We anticipate that solving the above cubic equation for $\lambda$ or alternatively, optimising the ***log-likelihood function*** for $\lambda$, will become less accurate at estimating $\lambda$ as the proportion of effect SNPs increases. This is due to the increased violation of our **assumption** that $\beta_{X_i} = 0$ and $\beta_{Y_i} = 0$ for $i=1,...,n$. Note that as the roots of the cubic equation can be both real and imaginary, we will focus on using the function `optimise` to optimise the ***log-likelihood function*** rather than solving the cubic equation. In all examples below, the fraction of overlap is 1 between the exposure and outcome samples and therefore, the true value for $\lambda$ is equal to the correlation between the exposure, $X$ and outcome, $Y$ which has been set to 0.6.
+We now use the function, `mr_sim_stats`, to simulate sets of summary
+statistics with different proportions of effect SNPs. We anticipate that
+solving the above cubic equation for $\lambda$ or alternatively,
+optimising the ***log-likelihood function*** for $\lambda$, will become
+less accurate at estimating $\lambda$ as the proportion of effect SNPs
+increases. This is due to the increased violation of our **assumption**
+that $\beta_{X_i} = 0$ and $\beta_{Y_i} = 0$ for $i=1,...,n$. Note that
+as the roots of the cubic equation can be both real and imaginary, we
+will focus on using the function `optimise` to optimise the
+***log-likelihood function*** rather than solving the cubic equation. In
+all examples below, the fraction of overlap is 1 between the exposure
+and outcome samples and therefore, the true value for $\lambda$ is equal
+to the correlation between the exposure, $X$ and outcome, $Y$ which has
+been set to 0.6.
 
 ```{r}
 set.seed(1998)
-
 ## prop_effect = 0
 data <- sim_mr_stats(10^5,0,0.4,1,50000,50000,0.6,0.3) 
 n <- nrow(data)
@@ -571,9 +620,9 @@ C <- sum((data$beta.outcome/data$se.outcome)^2)
 f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
 optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
 
-
-## prop_effect = 0.25
-data <- sim_mr_stats(10^5,0.25,0.4,1,50000,50000,0.6,0.3) 
+set.seed(1998)
+## prop_effect = 0.01
+data <- sim_mr_stats(10^5,0.01,0.4,1,50000,50000,0.6,0.3) 
 n <- nrow(data)
 B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
 A <- sum((data$beta.exposure/data$se.exposure)^2) 
@@ -581,20 +630,9 @@ C <- sum((data$beta.outcome/data$se.outcome)^2)
 f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
 optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
 
-
-## prop_effect = 0.5
-data <- sim_mr_stats(10^5,0.5,0.4,1,50000,50000,0.6,0.3) 
-n <- nrow(data)
-B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
-A <- sum((data$beta.exposure/data$se.exposure)^2) 
-C <- sum((data$beta.outcome/data$se.outcome)^2)
-## optimise log-likelihood
-f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
-optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
-
-
-## prop_effect = 0.75
-data <- sim_mr_stats(10^5,0.75,0.4,1,50000,50000,0.6,0.3) 
+set.seed(1998)
+## prop_effect = 0.1
+data <- sim_mr_stats(10^5,0.1,0.4,1,50000,50000,0.6,0.3) 
 n <- nrow(data)
 B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
 A <- sum((data$beta.exposure/data$se.exposure)^2) 
@@ -603,14 +641,32 @@ C <- sum((data$beta.outcome/data$se.outcome)^2)
 f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
 optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
 
+set.seed(1998)
+## prop_effect = 0.2
+data <- sim_mr_stats(10^5,0.2,0.4,1,50000,50000,0.6,0.3) 
+n <- nrow(data)
+B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
+A <- sum((data$beta.exposure/data$se.exposure)^2) 
+C <- sum((data$beta.outcome/data$se.outcome)^2)
+## optimise log-likelihood
+f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
+optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
 ```
 
-
-It is clear to see that, as anticipated, as more non-null effect SNPs are included in our calculations, bias is introduced into our estimate of $\lambda$. Therefore, in order to counteract this, we must select SNPs based on their $z$-values and perform our calculations with just these SNPs. We repeat the last example above but just with those SNPs in which their absolute $z$-values for both exposure and outcome are less than 0.5. It can be seen below that the correlation estimate is now extremely upward biased, indicating that our log-likelihood expression must then take into account this selection process. 
+It is clear to see that, as anticipated, as more non-null effect SNPs
+are included in our calculations, bias is introduced into our estimate
+of $\lambda$. Therefore, in order to counteract this, we must select
+SNPs based on their $z$-values and perform our calculations with just
+these SNPs. We repeat one of the examples above but just with those SNPs
+in which their absolute $z$-values for both exposure and outcome are
+less than 0.5. It can be seen below that the correlation estimate is now
+extremely upward biased, indicating that our log-likelihood expression
+must then take into account this selection process.
 
 ```{r}
-## prop_effect = 0.75
-data <- sim_mr_stats(10^5,0.5,0.4,1,50000,50000,0.6,0.3) 
+## prop_effect = 0.1
+set.seed(1998)
+data <- sim_mr_stats(10^5,0.1,0.4,1,50000,50000,0.6,0.3) 
 data <- data[abs(data$beta.exposure/data$se.exposure) < 0.5 & abs(data$beta.outcome/data$se.outcome) < 0.5,]
 n <- nrow(data)
 B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
@@ -621,39 +677,51 @@ f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
 optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
 ```
 
+[$\star$]{style="color: blue;"} **Question of interest:** Why has the
+value here increased towards 1, rather than decreased as we might have
+expected by restricting the region?
 
-How do we establish this new log-likelihood expression? 
-
-
-
-conditional likelihood - cumulative distribution function:
-assume $\sigma_{X_i}$ and $\sigma_{Y_i}$ are known, and $\beta_{X_i} = \beta_{Y_i} = 0$
+Therefore, we must now work on establishing this new ***conditional
+log-likelihood*** expression. As we have chosen to select SNPs with
+absolute $z$-scores for both exposure and outcome that are less than
+0.5, we first consider obtaining an expression for the probability of
+each SNP having absolute $z$-scores for both exposure and outcome less
+than 0.5. Continuing to assume that $\beta_{X_i}$ and $\beta_{Y_i}$ are
+both equal to 0 and $\sigma_{X_i}$ and $\sigma_{Y_i}$ are known, this
+probability for a single SNP is given by the following cumulative
+distribution function:
 
 $$f\left( |z_{X_i}| < 0.5, |z_{Y_i}| < 0.5 \right) = \frac{1}{2\pi\sqrt{1-\lambda^2}\sigma_{X_i}\sigma_{Y_i}} \int^{0.5}_{-0.5} \int^{0.5}_{-0.5} e^{ -\frac{1}{2(1-\lambda^2)} \left[ \left( z_{X_i}\right)^2 - 2\lambda\left(z_{X_i}\right)\left(z_{Y_i}\right) + \left( z_{Y_i}\right)^2\right]} dz_{X_i} dz_{Y_i}$$
 
-
-Is our desired likelihood expression the following then?
+Using the above expression, we can then establish our desired
+conditional likelihood, i.e. the likelihood of $\lambda$ given that only
+SNPs with both absolute $z$-scores less than 0.5 have been selected. We
+note the first two terms of the numerator and denominator cancel each
+other out in the expression, leaving only the exponential terms.
 
 $$
 \begin{aligned}
-L\left( \lambda | \bf{\hat\beta_X, \hat\beta_Y, \sigma_X, \sigma_Y} \right) &= \frac{\Pi_{i=1}^{n}f\left( \hat \beta_{X_i}, \hat \beta_{Y_i} \right)}{\left[ f\left( |z_{X_i}| < 0.5, |z_{Y_i}| < 0.5 \right)\right]^n} \\ &=  \frac{e^{-\frac{1}{2(1-\lambda^2)}\left[ \sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)^2 -2\lambda\sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] + \sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)^2\right]}}{\left[ \int^{0.5}_{-0.5} \int^{0.5}_{-0.5} e^{ -\frac{1}{2(1-\lambda^2)} \left[ \left( z_{X_i}\right)^2 - 2\lambda\left(z_{X_i}\right)\left(z_{Y_i}\right) + \left( z_{Y_i}\right)^2\right]} dz_{X_i} dz_{Y_i}\right]^n}
+L\left( \lambda \right) &= \frac{\Pi_{i=1}^{n}f\left( \hat \beta_{X_i}, \hat \beta_{Y_i} \right)}{\left[ f\left( |z_{X_i}| < 0.5, |z_{Y_i}| < 0.5 \right)\right]^n} \\ &=  \frac{e^{-\frac{1}{2(1-\lambda^2)}\left[ \sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)^2 -2\lambda\sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] + \sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)^2\right]}}{\left[ \int^{0.5}_{-0.5} \int^{0.5}_{-0.5} e^{ -\frac{1}{2(1-\lambda^2)} \left[ \left( z_{X_i}\right)^2 - 2\lambda\left(z_{X_i}\right)\left(z_{Y_i}\right) + \left( z_{Y_i}\right)^2\right]} dz_{X_i} dz_{Y_i}\right]^n}
 \end{aligned}
 $$
 
-
-
-Taking the log-likelihood:
+The ***conditional log-likelihood*** is then found to be:
 
 $$
 l\left( \lambda \right) = {-\frac{1}{2(1-\lambda^2)}\left[ \sum_{i=1}^{n}\left( \frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)^2 -2\lambda\sum_{i=1}^{n}\left[\left(\frac{\hat\beta_{X_i}}{\sigma_{X_i}}\right)\left(\frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)\right] + \sum_{i=1}^{n}\left( \frac{\hat\beta_{Y_i}}{\sigma_{Y_i}}\right)^2\right]}- n \cdot \log \left[ \int^{0.5}_{-0.5} \int^{0.5}_{-0.5} e^{ -\frac{1}{2(1-\lambda^2)} \left[ \left( z_{X_i}\right)^2 - 2\lambda\left(z_{X_i}\right)\left(z_{Y_i}\right) + \left( z_{Y_i}\right)^2\right]} dz_{X_i} dz_{Y_i}\right]
 $$
 
-
+We now simulate data in a similar manner to above and consider
+estimating $\lambda$ by optimizing this conditional log-likelihood
+function. The inclusion of the integral in this expression makes it much
+more complex to work with than the previous function. However, we will
+attempt to define the function and subsequently optimize it using the
+`pracma` package, as shown below.
 
 ```{r}
 library(pracma)
-
-data <- sim_mr_stats(10^5,0.5,0.4,1,50000,50000,0.6,0.3) 
+set.seed(1998)
+data <- sim_mr_stats(10^5,0.1,0.4,1,50000,50000,0.6,0.3) 
 data <- data[abs(data$beta.exposure/data$se.exposure) < 0.5 & abs(data$beta.outcome/data$se.outcome) < 0.5,]
 n <- nrow(data)
 B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
@@ -666,7 +734,345 @@ fun_obj <- function(lambda){
   xmin = -0.5,xmax = 0.5, ymin = -0.5, ymax = 0.5)$Q))
 } 
 
-solution <- optimize(fun_obj, interval=c(-1,1),maximum=TRUE)$maximum
-solution
-
+optimize(fun_obj, interval=c(-1,1),maximum=TRUE)$maximum
 ```
+
+We can see that our approach seems to have performed reasonably well
+here. There is a small improvement in the estimate over using all the
+SNPs while there is a considerable improvement compared to the instance
+in which we selected SNPs and used the original non-conditional
+expression.
+
+#### Simulations
+
+However, the above is only one example and thus, in order to test our
+estimation approach properly, we will perform a brief simulation study.
+The following code was run:
+
+```{r, eval=FALSE}
+library(parallel)
+## Total number of simulations:
+tot_sim <- 10
+## Set of parameters:
+sim_params <- expand.grid(
+  sim = c(1:tot_sim),
+  h2 = c(0.2,0.4,0.6),
+  prop_effect = c(0.01,0.05,0.1),
+  cor_xy = c(-0.1,0.1,0.3,0.5)
+)
+
+set.seed(1998)
+run_sim <- function(h2,prop_effect,cor_xy,sim){
+  data_full <- sim_mr_stats(n_snps=10^6, prop_effect, h2, frac_overlap=1, n_x=50000, n_y=50000, cor_xy, beta_xy=0.3)
+  n <- nrow(data_full)
+  B <- sum((data_full$beta.exposure/data_full$se.exposure)*(data_full$beta.outcome/data_full$se.outcome))
+  A <- sum((data_full$beta.exposure/data_full$se.exposure)^2) 
+  C <- sum((data_full$beta.outcome/data_full$se.outcome)^2)
+  ## optimise log-likelihood
+  f <-function(x){-(n/2)*(log(1-x^2)) - ((1)/(2*(1-x^2)))*(A-2*x*B+C)}
+  est_cor_full <- optimize(f,interval=c(-1,1),maximum=TRUE)$maximum
+  
+  data <- data_full[abs(data_full$beta.exposure/data_full$se.exposure) < 0.5 & abs(data_full$beta.outcome/data_full$se.outcome) < 0.5,]
+  n <- nrow(data)
+  B <- sum((data$beta.exposure/data$se.exposure)*(data$beta.outcome/data$se.outcome))
+  A <- sum((data$beta.exposure/data$se.exposure)^2)
+  C <- sum((data$beta.outcome/data$se.outcome)^2)
+  ## optimise conditional log-likelihood
+  fun_obj <- function(lambda){
+    - ((1)/(2*(1-lambda^2)))*(A-2*lambda*B+C) - n*log((pracma::integral2(function(x,y)
+      exp((-(1)/(2*(1-lambda^2)))*(x^2-2*lambda*x*y+y^2)),
+      xmin = -0.5,xmax = 0.5, ymin = -0.5, ymax = 0.5)$Q))
+  }
+  est_cor <- optimize(fun_obj, interval=c(-1,1),maximum=TRUE)$maximum
+  
+  results <- list(params = c(h2,prop_effect,cor_xy), est_cor=c(est_cor,est_cor_full), data = data_full)
+  return(results)
+}
+
+res <- mclapply(1:nrow(sim_params), function(i){
+  do.call(run_sim, args=as.list(sim_params[i,]))}, mc.cores=1)
+```
+
+```{r,include=FALSE}
+res <- read.csv("cor_deriv_sims.csv")
+
+res$sim_cor <- c(rep(c(1:90),4))
+res_new <- rbind(res,res)
+res_new$true_cor <- res_new$actual_cor
+res_new$est_cor <- c(res$est_cor,res$est_cor_full)
+res_new$fun <- c(rep("CL",360),rep("L",360))
+res <- res_new
+```
+
+The number of SNPs is fixed at 1,000,000 and the sample size is fixed at
+50,000 with full sample overlap. The causal effect of the exposure on
+the outcome remains at **0.3** for each simulation. The heritability
+takes values $h^2 \in \{0.2,0.4,0.6\}$, the proportion of effect SNPs
+takes values $\pi \in \{0.01,0.05,0.1\}$ and the true correlation
+between the exposure and outcome is varied as follows:
+$\text{cor}_{XY} \in \{-0.1,0.1,0.3,0.5\}$. This factorial design study
+is repeated **10** times. In this small set of simulations, we consider
+two options for estimating the correlation:
+
+i)  `fun: L`: optimizing the *log-likelihood* function with the full set
+    of SNPs
+
+ii) `fun: CL`: optimizing the *conditional log-likelihood* function with
+    a selected subset of SNPs in which both absolute $z$-scores of every
+    SNP in the subset are less than 0.5
+
+The above results are organised in a dataframe and we attempt to
+illustrate as follows:
+
+```{r, fig.width=10}
+library("RColorBrewer")
+col <- brewer.pal(8,"GnBu")
+ggplot(res, aes(x=sim_cor, y=est_cor,color=as.factor(h2),shape=as.factor(prop_effect))) + geom_point(size=2) + facet_grid(fun~true_cor, labeller="label_both")+ ylab("Estimated Correlation") + xlab("Simulation") + scale_color_manual(values=c(col[4],col[6],col[8])) +
+  geom_hline(aes(yintercept = true_cor), linetype=1, size=0.5) + 
+  guides(color = guide_legend(title = "Heritability"), shape= guide_legend(title = "Polygenicity")) 
+```
+
+[$\star$]{style="color: blue;"} **Note:** In the above grid, `true_cor`
+represents the true correlation value. Furthermore, the bottom half of
+the grid, `fun: L`, depicts the estimates obtained by optimizing the
+*log-likelihood* function with the full set of SNPs while the top half,
+`fun: CL`, depicts the estimated values computed by optimizing the
+*conditional log-likelihood* function with a selected subset of SNPs in
+which both absolute $z$-scores of every SNP in the subset are less than
+0.5.
+
+In addition to this illustration, we also compute the average estimated
+correlation, `mean` as well as the root mean square error, `rmse`, for
+each true correlation value.
+
+```{r,include=FALSE}
+res <-res_new[1:360,]
+```
+
+```{r}
+rmse.L <- function(cor){sqrt(sum((res[res$true_cor==cor,]$est_cor_full - res[res$true_cor==cor,]$true_cor)^2)/nrow(res[res$true_cor==cor,]))}
+rmse.CL <- function(cor){sqrt(sum((res[res$true_cor==cor,]$est_cor - res[res$true_cor==cor,]$true_cor)^2)/nrow(res[res$true_cor==cor,]))}
+mean.L <- function(cor){sum(res[res$true_cor==cor,]$est_cor_full)/nrow(res[res$true_cor==cor,])}
+mean.CL <- function(cor){sum(res[res$true_cor==cor,]$est_cor)/nrow(res[res$true_cor==cor,])}
+rmse <- data.frame(true_cor = c(-0.1,0.1,0.3,0.5),
+                   mean.L = c(mean.L(-0.1),mean.L(0.1),mean.L(0.3),mean.L(0.5)),
+                   mean.CL = c(mean.CL(-0.1),mean.CL(0.1),mean.CL(0.3),mean.CL(0.5)),
+                   rmse.L = c(rmse.L(-0.1),rmse.L(0.1),rmse.L(0.3),rmse.L(0.5)),
+                   rmse.CL = c(rmse.CL(-0.1),rmse.CL(0.1),rmse.CL(0.3),rmse.CL(0.5)))
+rmse
+```
+
+The above results give us an indication that both methods seem to be
+largely *unbiased* as the averages for each are very close to the
+corresponding true correlation values. However, the much larger `rmse`
+values for the second approach suggest that it has a much greater
+variance. This large variance is also evident in the above plot.
+
+[$\star$]{style="color: blue;"} **Conclusions?**
+
+<br>
+
+#### Real Data
+
+We also decided to test our approach for estimating the correlation, or
+$\lambda$, on real data. The steps followed are provided in detail
+below. As it is estimating $\lambda$ that is of interest here, rather
+than estimating the causal effect, we simply considered two quantitative
+traits, BMI and height. We first randomly obtained a subset of 100,000
+individuals which were common to both BMI and height UKBB datasets. This
+provided us with fully overlapping datasets, which means that
+$\hat \lambda = \hat \rho_{XY}$, in which $\rho_{XY}$ is the correlation
+between the exposure and the outcome. Therefore, the individual level
+data for these 100,000 individuals allow us to obtain $\hat\rho_{XY}$.
+Then, by carrying out GWASs for both datasets and obtaining summary
+statistics, we can use these summary statistics to obtain $\hat \lambda$
+and test our approach. We note that we must use our approach on
+independent SNPs and therefore, we will also consider pruning our full
+set of SNPs to obtain a smaller set of approximately independent SNPs.
+It is then the summary statistics of this smaller set of SNPs that will
+be used to estimate $\lambda$.
+
+[$\star$]{style="color: blue;"} **Note:** We had considered clumping the
+SNPs as opposed to pruning, as it is clumping that seems to be more
+often used in MR practices. However, clumping functionality is not
+available on PLINK 2.0 and thus, pruning was deemed the quicker easier
+choice.
+
+**Step 1: Obtain fully overlapping sample data set**
+
+*Code:*
+`Rscript sample_HB.R height4plink.txt bmi4plink.txt height_cor.txt bmi_cor.txt cor_HB.txt`
+
+-   *Inputs:* height4plink.txt, bmi4plink.txt
+-   *Outputs:* height_cor.txt, bmi_cor.txt, cor_HB.txt
+
+***R scripts:***
+
+-   [**sample_HB.R**](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/R/sample_HB.R)
+    reads in both height4plink.txt and bmi4plink.txt. It first removes
+    any individuals which do not have available information for both
+    traits and then, obtains a set of individuals which are common to
+    both datasets. From this set, using `set.seed(1998)`, a random set
+    of 100,000 individuals are chosen. The outputted data sets,
+    height_cor.txt and bmi_cor.txt contain height and BMI information,
+    respectively, of the same 100,000 individuals, ordered by ID number.
+    Using the function `cor()`, the correlation between height and BMI
+    for these individuals is obtained and can be found in cor_HB.txt.
+
+[$\star$]{style="color: blue;"} **Note:** The estimate for $\rho_{XY}$,
+which was obtained using the sample of 100,000 UKBB individuals, was
+found to be **-0.0168766255879653**.
+
+**Step 2: Performing two GWASs**
+
+*Code:* `sbatch parallel_height_cor.sh` `sbatch parallel_bmi_cor.sh`
+
+-   *Inputs:* height_cor.txt, bmi_cor.txt, height_cor.sh, bmi_cor.sh,
+    height_cor.txt, bmi_cor.txt, \*\_qcd.pgen, \*\_qcd.psam,
+    \*\_qcd.pvar
+-   *Outputs:* height_res\_\*.PHENO1.glm.linear,
+    bmi_res\_\*.PHENO1.glm.linear for each chromosome
+
+***Shell scripts:***
+
+-   [height_cor.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/height_cor.sh)
+    and
+    [bmi_cor.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/bmi_cor.sh)
+    first combine the genotype information, \*\_qcd.pgen, \*\_qcd.psam,
+    \*\_qcd.pvar, with the height/BMI data sets,
+    height_cor.txt/bmi_cor.txt, to make \*\_qcd_height.bed,
+    \*\_qcd_height.bim, \*\_qcd_height.fam and \*\_qcd_bmi.bed,
+    \*qcd_bmi.bim, \*qcd_bmi.fam files for the specified chromosome.
+    They then use these files and perform an association analysis with
+    the results outputted in height_res\*.PHENO1.glm.linear and
+    bmi_res\*.PHENO1.glm.linear for the chromsome.
+
+-   [parallel_height_cor.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/parallel_height_cor_prune.sh)
+    and
+    [parallel_bmi_cor.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/parallel_bmi_cor_prune.sh)
+    run height_cor.sh and bmi_cor.sh, respectively, on each chromosome
+    from 1 to 22 in parallel.
+
+**Step 3: Combining results**
+
+*Code:* `sbatch summary_stats_height_cor.sh`
+`sbatch summary_stats_bmi_cor.sh`
+
+-   *Inputs:* summary_stats_height_cor.R, summary_stats_bmi_cor.R,
+    height_res\_\*.PHENO1.glm.linear, bmi_res\_\*.PHENO1.glm.linear for
+    each chromosome
+-   *Outputs:* summary_stats_height_cor.txt, summary_stats_bmi_cor.txt
+
+***R scripts:***
+
+-   [summary_stats_height_cor.R](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/R/summary_stats_height_cor.R)
+    and
+    [summary_stats_bmi_cor.R](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/R/summary_stats_bmi_cor.R)
+    combine together the summary statistics obtained from performing an
+    association analysis on each chromosome, with respect to height/BMI,
+    and output data sets with 5 columns: chromosome, position, rsID,
+    estimated effect size, standard error of estimated effect size.
+
+***Shell scripts:***
+
+-   [summary_stats_height_cor.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/summary_stats_height_cor.sh)
+    and
+    [summary_stats_bmi_cor.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/summary_stats_bmi_cor.sh)
+    run the R scripts summary_stats_height_cor.R and
+    summary_stats_bmi_cor.R, inputting height_res\_\*.PHENO1.glm.linear
+    and bmi_res\_\*.PHENO1.glm.linear of each chromsome and outputting
+    summary_stats_height_cor.txt and summary_stats_bmi_cor.txt.
+
+**Step 4: Obtaining pruned set of SNPs**
+
+*Code:* `sbatch parallel_bmi_cor_prune.sh`
+`sbatch parallel_height_cor_prune.sh` `sbatch join_pruned_bmi.sh`
+`sbatch join_pruned_height.sh` `sbatch summary_stats_prune.sh`
+
+-   *Inputs:* bmi_cor_prune.sh, height_cor_prune.sh, bmi_cor.txt,
+    height_cor.txt, \*\_qcd.pgen, \*\_qcd.psam, \*\_qcd.pvar,
+    prune_join.R, summary_stats_prune.R, summary_stats_height_cor.txt,
+    summary_stats_bmi_cor.txt
+-   *Outputs:* summary_stats_height_prune.txt,
+    summary_stats_bmi_prune.txt
+
+***R scripts:***
+
+-   [prune_join.R](https://github.com/amandaforde/winnerscurse_MR/tree/main/real_data_scripts/R/prune_join.R)
+    combines the lists of pruned SNPs together from the 22 chromosomes
+    to form a single list.
+
+-   [summary_stats_prune.R](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/R/summary_stats_prune.R)
+    reads in the list of pruned SNPs and a data set of summary
+    statistics, i.e. summary_stats_height_cor.txt or
+    summary_stats_bmi_cor.txt. It then creates a subset of this summary
+    statistics data set which contains summary statistics of only those
+    SNPs contained in the list of pruned SNPs.
+
+***Shell scripts:***
+
+-   [bmi_cor_prune.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/bmi_cor_prune.sh)
+    and
+    [height_cor_prune.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/height_cor_prune.sh)
+    first combine the genotype information, \*\_qcd.pgen, \*\_qcd.psam,
+    \*\_qcd.pvar, with the BMI/height data set,
+    bmi_cor.txt/height_cor.txt, to make \*\_qcd_bmi.bed,
+    \*\_qcd_bmi.bim, \*\_qcd_bmi.fam and \*\_qcd_height.bed,
+    \*qcd_height.bim, \*qcd_height.fam files for the specified
+    chromosome. They then use these files and employ the command
+    `--indep-pairwise 50 5 0.5` for pruning. This means that pruning
+    occurs by first calculating LD between each pair of SNPs in a window
+    of 50 SNPs. If an LD value greater than 0.5 is observed, then one
+    SNP out of this pair is removed. The window is shifted 5 SNPs
+    forward and the process is repeated. A set of pruned SNPs are
+    outputted and contained in the files bmi_prune\*.prune.in and
+    height_prune\*.prune.in for each chromosome.
+
+-   [parallel_bmi_cor_prune.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/parallel_bmi_cor_prune.sh)
+    and
+    [parallel_height_cor_prune.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/parallel_height_cor_prune.sh)
+    run bmi_cor_prune.sh and height_cor_prune.sh, respectively, on each
+    chromosome from 1 to 22 in parallel.
+
+-   [join_pruned_bmi.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/join_pruned_bmi.sh)
+    and
+    [join_pruned_height.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/join_pruned_height.sh)
+    run the R script prune_join.R, inputting bmi_prune\_\*.prune.in and
+    height_prune\_\*.prune.in of each chromosome and outputting
+    pruned_SNPS_bmi.txt and pruned_SNPS_height.txt, which both contain a
+    list of 1,590,043 SNPs.
+
+-   [summary_stats_prune.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/summary_stats_prune.sh)
+    runs the R script summary_stats_prune.R twice, first inputting
+    pruned_SNPs_bmi.txt and summary_stats_bmi_cor.txt and outputting
+    summary_stats_bmi_prune.txt. The second time, pruned_SNPs_height.txt
+    and summary_stats_height_cor.txt are inputted, and
+    summary_stats_height_prune.txt is outputted.
+
+**Step 5: Estimating correlation**
+
+*Code:* `sbatch cor_check.sh`
+
+-   *Inputs:* cor_check.R, summary_stats_bmi_prune.txt,
+    summary_stats_height_prune.txt
+-   *Outputs:* est_cor.txt
+
+***R scripts:***
+
+-   [**cor_check.R**](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/shell/cor_check.R) first reads in the summary statistics for the pruned set of SNPs for both height and BMI, summary_stats_height_prune.txt and summary_stats_bmi_prune.txt. It then ensures that any rows with missing information for the estimated effect size are removed from each data set and that both data sets contain summary statistics for the exact same SNPs. Following this, our first approach for estimating the correlation, or $\lambda$, using summary statistics is considered. The entire set of SNPs is used and the *log-likelihood* function is optimized to obtain an estimate. Second, a subset of SNPs is obtained which all have absolute $z$-scores for both height and BMI less than 0.5. The *conditional log-likelihood* function is then optimized to obtain a second estimate. The two estimates are outputted in est_cor.txt.
+
+***Shell scripts:***
+
+-   [cor_check.sh](https://github.com/amandaforde/winnerscurse_MR/blob/main/real_data_scripts/R/cor_check.sh)
+    runs the R script cor_check.R, inputting summary_stats_bmi_prune.txt
+    and summary_stats_height_prune.txt and outputting est_cor.txt.
+
+[$\star$]{style="color: blue;"} **Note:** The estimate for $\lambda$
+obtained using the first version of our approach, in which the
+*log-likelihood* function is optimized using the full set of SNPs, was
+**-0.086906563122001**, while the estimate obtained by optimizing the
+*conditional log-likelihood* function with a selected subset of SNPs, in
+which both absolute $z$-scores of every SNP in the subset are less than
+0.5, was **-0.093659068071487**.
+
+[$\star$]{style="color: blue;"} **Conclusions?**
