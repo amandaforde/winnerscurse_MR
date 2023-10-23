@@ -4,11 +4,11 @@ title: "Removing Winner's Curse bias in two-sample Mendelian randomisation with 
 author: "Amanda Forde"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  html_notebook:
+    toc: yes
   html_document:
     toc: yes
     df_print: paged
-  html_notebook:
-    toc: yes
 editor_options: 
   markdown: 
     wrap: 72
