@@ -868,7 +868,52 @@ corresponding true correlation values. However, the much larger `rmse`
 values for the second approach suggest that it has a much greater
 variance. This large variance is also evident in the above plot.
 
+The above simulation study is repeated with the exact same parameters but with the **sample size increased to 1,000,000**. The results can be illustrated as follows.
+
+
+```{r,include=FALSE}
+res <- read.csv("cor_deriv_sims_2.csv")
+
+res$sim_cor <- c(rep(c(1:90),4))
+res_new <- rbind(res,res)
+res_new$true_cor <- res_new$actual_cor
+res_new$est_cor <- c(res$est_cor,res$est_cor_full)
+res_new$fun <- c(rep("CL",360),rep("L",360))
+res <- res_new
+```
+
+```{r, fig.width=10}
+library("RColorBrewer")
+col <- brewer.pal(8,"GnBu")
+ggplot(res, aes(x=sim_cor, y=est_cor,color=as.factor(h2),shape=as.factor(prop_effect))) + geom_point(size=2) + facet_grid(fun~true_cor, labeller="label_both")+ ylab("Estimated Correlation") + xlab("Simulation") + scale_color_manual(values=c(col[4],col[6],col[8])) +
+  geom_hline(aes(yintercept = true_cor), linetype=1, size=0.5) + 
+  guides(color = guide_legend(title = "Heritability"), shape= guide_legend(title = "Polygenicity")) 
+```
+```{r,include=FALSE}
+res <-res_new[1:360,]
+```
+
+
+In addition, we compute the average estimated correlation as well as the root mean square error for each true correlation value. 
+
+```{r}
+rmse.L <- function(cor){sqrt(sum((res[res$true_cor==cor,]$est_cor_full - res[res$true_cor==cor,]$true_cor)^2)/nrow(res[res$true_cor==cor,]))}
+rmse.CL <- function(cor){sqrt(sum((res[res$true_cor==cor,]$est_cor - res[res$true_cor==cor,]$true_cor)^2)/nrow(res[res$true_cor==cor,]))}
+mean.L <- function(cor){sum(res[res$true_cor==cor,]$est_cor_full)/nrow(res[res$true_cor==cor,])}
+mean.CL <- function(cor){sum(res[res$true_cor==cor,]$est_cor)/nrow(res[res$true_cor==cor,])}
+rmse <- data.frame(true_cor = c(-0.1,0.1,0.3,0.5),
+                   mean.L = c(mean.L(-0.1),mean.L(0.1),mean.L(0.3),mean.L(0.5)),
+                   mean.CL = c(mean.CL(-0.1),mean.CL(0.1),mean.CL(0.3),mean.CL(0.5)),
+                   rmse.L = c(rmse.L(-0.1),rmse.L(0.1),rmse.L(0.3),rmse.L(0.5)),
+                   rmse.CL = c(rmse.CL(-0.1),rmse.CL(0.1),rmse.CL(0.3),rmse.CL(0.5)))
+rmse
+```
+
+[$\star$]{style="color: blue;"} **Note:** These new set of results in which we have increased the sample size show us that the *log-likelihood* approach is clearly ***biased*** while the *conditional log-likelihood* remains ***unbiased*** with a high degree of variance.
+
+
 [$\star$]{style="color: blue;"} **Conclusions?**
+
 
 <br>
 
@@ -1075,4 +1120,62 @@ obtained using the first version of our approach, in which the
 which both absolute $z$-scores of every SNP in the subset are less than
 0.5, was **-0.093659068071487**.
 
+
+**Step 5a: Estimating correlation with unpruned SNPs**
+
+*Code:* `sbatch cor_check.sh`
+
+-   *Inputs:* cor_check.R, summary_stats_bmi_cor.txt,
+    summary_stats_height_cor.txt
+-   *Outputs:* est_cor_full.txt
+
+Here, we use the same R script as above but now apply it to our original unpruned sets of summary statistics.
+
+[$\star$]{style="color: blue;"} **Note:** The estimate for $\lambda$
+obtained using the first version of our approach, in which the
+*log-likelihood* function is optimized using the full set of SNPs, was
+**-0.0861423439755467**, while the estimate obtained by optimizing the
+*conditional log-likelihood* function with a selected subset of SNPs, in
+which both absolute $z$-scores of every SNP in the subset are less than
+0.5, was [**-0.0352981656737371**]{style="color: darkred;"}.
+
+Even though the SNPs used here are no longer independent, we can see that we have potentially stabilised the *conditional log-likelihood* estimate further as it has moved closer to the expected value while the *log-likelihood* remains at a similar value as before.
+
+
+**Step 5b: Estimating correlation with increased $z$-statistic threshold**
+
+*Code:* `sbatch cor_check.sh`
+
+-   *Inputs:* cor_check.R, summary_stats_bmi_prune.txt,
+    summary_stats_height_prune.txt
+-   *Outputs:* est_cor_1_prune.txt
+
+Here, we use the same R script as above applied to the pruned set of SNPs, but in which the subset of SNPs used by the *conditional log-likelihood* function all have absolute $z$-scores for both height and BMI less than **1**.
+
+[$\star$]{style="color: blue;"} **Note:** The estimate for $\lambda$
+obtained using the first version of our approach, in which the
+*log-likelihood* function is optimized using the full set of SNPs, was
+**-0.0869065653122001**, while the estimate obtained by optimizing the
+*conditional log-likelihood* function with a selected subset of SNPs, in
+which both absolute $z$-scores of every SNP in the subset are less than
+1, was **-0.0836582509286098**.
+
+*Code:* `sbatch cor_check.sh`
+
+-   *Inputs:* cor_check.R, summary_stats_bmi_cor.txt,
+    summary_stats_height_cor.txt
+-   *Outputs:* est_cor_1_unprune.txt
+
+Again, we use the same R script as above applied to the original unpruned set of SNPs, but in which the subset of SNPs used by the *conditional log-likelihood* function all have absolute $z$-scores for both height and BMI less than **1**.
+
+[$\star$]{style="color: blue;"} **Note:** The estimate for $\lambda$
+obtained using the first version of our approach, in which the
+*log-likelihood* function is optimized using the full set of SNPs, was
+**-0.0861423439755467**, while the estimate obtained by optimizing the
+*conditional log-likelihood* function with a selected subset of SNPs, in
+which both absolute $z$-scores of every SNP in the subset are less than
+1, was **-0.077674560083575**.
+
 [$\star$]{style="color: blue;"} **Conclusions?**
+
+
