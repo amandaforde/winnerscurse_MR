@@ -20,7 +20,7 @@ Source:
 ```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 library(dplyr)
-#library(TwoSampleMR)
+library(TwoSampleMR)
 library(ggplot2)
 library(patchwork)
 library(ggpubr)
@@ -457,6 +457,67 @@ Putting all of the above together, we obtain an alternative form of the
 required conditional distribution:
 
 $$ \left( \begin{pmatrix} \hat \beta_{X1_\pi} \\ \hat \beta_{Y1_\pi} \end{pmatrix} \Bigl \lvert \begin{pmatrix} \hat \beta_{X1} \\ \hat \beta_{Y1} \end{pmatrix} \right) \sim N\left( \begin{pmatrix} \hat\beta_{X1}  \\ \hat\beta_{Y1} \end{pmatrix}, \left( \frac{1-\pi}{\pi}\right) \begin{pmatrix} \left(\text{se}\left(\hat \beta_{X1}\right)\right)^2 & \text{se}\left(\hat \beta_{X1}\right) \text{se}\left(\hat \beta_{Y1}\right) \frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}}\\ \text{se}\left(\hat \beta_{X1}\right) \text{se}\left(\hat \beta_{Y1}\right) \frac{N_{\text{overlap}}\rho}{\sqrt{N_XN_Y}} & \left(\text{se}\left(\hat \beta_{Y1}\right)\right)^2 \end{pmatrix}\right)$$
+
+<br><br>
+
+### Estimating the Causal Effect 
+
+For a given data set, we can
+easily simulate $\hat\beta_{X1_\pi}$ and $\hat\beta_{Y1_\pi}$ for each SNP using the above conditional distribution and our known values of $\hat\beta_{X1}$ and $\hat\beta_{Y1}$. We
+then obtain $\widehat{\text{se}(\hat\beta_{X1_\pi})}$ by approximating
+it with
+$\sqrt{\text{var}(\hat\beta_{X1_\pi})} \sim \sqrt{\frac{1}{\pi}\cdot (\text{se}(\hat\beta_{X1}))^2}$,
+and subsequently, obtain the corresponding $p$-value for
+$\hat\beta_{X1_\pi}$ for each SNP. Any SNPs who have a $p$-value less
+than $5 \times 10^{-8}$, or another threshold of choice, are then **selected**.
+
+Then, as mentioned in the opening paragraph of this document, in order to avoid *Winner's Curse*, we obtain the estimates
+corresponding to the other $1-\pi$ fraction of the data set, i.e.
+$\hat\beta_{X1_{1-\pi}}$, $\widehat{\text{se}(\hat\beta_{X1_{1-\pi}})}$,
+$\hat\beta_{Y1_{1-\pi}}$ and
+$\widehat{\text{se}(\hat\beta_{Y1_{1-\pi}})}$, using:
+
+-   $\hat\beta_{X1_{1-\pi}} = \frac{\hat\beta_{X1} - \pi\hat\beta_{X1_\pi}}{1-\pi}$
+
+-   $\hat\beta_{Y1_{1-\pi}} = \frac{\hat\beta_{Y1} - \pi\hat\beta_{Y1_\pi}}{1-\pi}$
+
+-   $\widehat{\text{se}(\hat\beta_{X1_{1-\pi}})} \sim \sqrt{\frac{1}{1-\pi}\cdot (\text{se}(\hat\beta_{X1}))^2}$
+
+-   $\widehat{\text{se}(\hat\beta_{Y1_{1-\pi}})} \sim \sqrt{\frac{1}{1-\pi}\cdot (\text{se}(\hat\beta_{Y1}))^2}$
+
+The MR method of choice can then be applied to these estimates to obtain an estimate for the causal effect. For example, $\hat\beta_{X1_{1-\pi}}$, $\widehat{\text{se}(\hat\beta_{X1_{1-\pi}})}$,
+$\hat\beta_{Y1_{1-\pi}}$ and
+$\widehat{\text{se}(\hat\beta_{Y1_{1-\pi}})}$, can be inputted into the `mr` function from the R
+package `TwoSampleMR`, with a specified MR method, such as `"mr_ivw"` or `"mr_raps"`. The idea is that our method will
+incorporate **several iterations** of this described process and then obtain
+an **average** of all results in order to provide an estimate for
+$\hat\beta$, the causal effect of the exposure on the outcome, which
+does not suffer from *Winner's Curse* bias.
+
+[$\star$]{style="color: blue;"} **Note:** If we let $\hat\beta^{(i)}$ be the estimate for the causal
+effect obtained at iteration $i$, then our final estimate for the **causal
+effect** of the exposure on the outcome is denoted by
+$\overline{\hat\beta} = \sum_{i=1}^{N_{\text{iter}}} \hat\beta^{(i)}$, the average of the estimates
+obtained at each iteration.
+
+Our next task is to obtain a suitable value for
+$\text{se}\left( \overline{\hat\beta} \right)$, the **standard error** of
+our causal effect estimate. In order to do so, let us consider
+$\sum_{i=1}^{N_{\text{iter}}}\left( \hat\beta^{(i)} - \overline{\hat\beta} \right)^2$
+which can be easily computed from our set of results. Now,
+
+$$\sum_{i=1}^{N_{\text{iter}}}\left( \hat\beta^{(i)} - \overline{\hat\beta} \right)^2 \approx E\left[ \sum_{i=1}^{N_{\text{iter}}}\left( \hat\beta^{(i)} - \overline{\hat\beta} \right) ^2 \right] = \sum_{i=1}^{N_{\text{iter}}} \left[E\left( \left(\hat\beta^{(i)} \right)^2 \right)\right] - N_{\text{iter}}\cdot E\left( \left( \overline{\hat\beta}\right)^2 \right)$$
+Using the well-known identity $E(X^2) = \text{var}(X) + (E(X))^2$, we
+get:
+$$\sum_{i=1}^{N_{\text{iter}}}\left( \hat\beta^{(i)} - \overline{\hat\beta} \right) \approx \sum_{i=1}^{N_{\text{iter}}} \left[ \text{var}\left(\hat\beta^{(i)}\right) + \left(E\left(\hat\beta^{(i)}\right)\right)^2 \right] - N_{\text{iter}}\cdot \left[ \text{var}\left(\overline{\hat\beta}\right) + \left(E\left(\overline{\hat\beta}\right)\right)^2\right]$$
+
+As$E\left( \hat\beta^{(i)} \right) = E\left( \overline{\hat\beta} \right)$
+for $i=1,...,N_{\text{iter}}$, we have:
+$$\sum_{i=1}^{N_{\text{iter}}}\left( \hat\beta^{(i)} - \overline{\hat\beta} \right) \approx \sum_{i=1}^{N_{\text{iter}}} \left[ \text{var}\left(\hat\beta^{(i)}\right)\right] - N_{\text{iter}}\cdot \left[ \text{var}\left(\overline{\hat\beta}\right)\right]$$
+This finally gives us an expression for
+$\text{se}\left( \overline{\hat\beta} \right)$ as follows:
+
+$$\text{se}\left( \overline{\hat\beta} \right) = \sqrt{\frac{\sum_{i=1}^{N_{\text{iter}}} \left[ \left( \text{se}\left(\hat\beta^{(i)}\right) \right) ^2\right] - \sum_{i=1}^{N_{\text{iter}}}\left[ \hat\beta^{(i)} - \overline{\hat\beta} \right]}{N_{\text{iter}}}}.$$
 
 <br><br>
 
@@ -1176,6 +1237,321 @@ obtained using the first version of our approach, in which the
 which both absolute $z$-scores of every SNP in the subset are less than
 1, was **-0.077674560083575**.
 
+
 [$\star$]{style="color: blue;"} **Conclusions?**
+
+<br>
+
+
+### Reducing SNP numbers 
+
+It is mentioned in our section regarding estimating the causal effect that our proposed method involves repeatedly simulating values for $\hat\beta_{X_{\pi}}$ and $\hat\beta_{Y_{\pi}}$ and then selecting SNPs using $\hat\beta_{X_{\pi}}$. In order to reduce the standard error of our causal effect estimate, this repeated simulation of $\hat\beta_{X_{\pi}}$ and $\hat\beta_{Y_{\pi}}$ values occurs several times, ideally at the very minimum $N_{\text{iter}} = 100$ times. Naturally, with a large data set of SNPs, this repeated simulation process is very **computationally intensive**. Of course, there are many SNPs that will never be selected across the $N_{\text{iter}}$ iterations. 
+
+Thus, in order to improve the computational intensity of our approach, we propose that a **subset of SNPs** should be first obtained from the large data set of SNPs and it is just then the SNPs in this subset that will be used in our method. We suggest that selection of a SNP into this subset will be based on its probability to be selected on a given iteration, i.e. the probability that the simulated value $\left| \hat{z}_{X_{\pi}} \right| = \left| \frac{\hat\beta_{X_{\pi}}}{\widehat{\text{se}(\hat\beta_{X_{\pi}})}} \right|$ is less than `qnorm((5e-8)/2, lower.tail=FALSE)` $\approx 5.45$, in which we have chosen that selection at each iteration is based on the $p$-value threshold of $5 \times 10^{-8}$. Therefore, we must now derive an expression for the probability of a SNP to be selected on a given iteration. 
+
+Firstly, let us note that from our work detailed above, we know that $\sqrt{\text{var}\left( \hat\beta_{X_\pi}\right)} \sim \sqrt{\frac{1}{\pi}\cdot \text{var}\left( \hat\beta_{X}\right)}$ which allows us to approximate $\widehat{\text{se}\left( \hat\beta_{X_\pi}\right)} \sim \sqrt{\frac{1}{\pi}\cdot \left(\text{se}\left( \hat\beta_{X}\right)\right)^2}$. We can then define $\hat{z}_{X_{\pi}}$ as $\hat{z}_{X_{\pi}}=\frac{\hat\beta_{X_{\pi}}}{\sqrt{\frac{1}{\pi}\cdot \left(\text{se}\left( \hat\beta_{X}\right)\right)^2}}$.
+
+Now, from above, we also have the following $E(\hat\beta_{X_\pi} | \hat\beta_{X}) = \hat\beta_{X}$ and $\text{var}\left( \hat\beta_{X_\pi} | \hat\beta_{X} \right) \sim \frac{1-\pi}{\pi}\cdot \text{var}\left( \hat\beta_{X}\right)$ which gives $\left(\text{se}\left( \hat\beta_{X_\pi} | \hat\beta_{X}\right)\right)^2 \sim \frac{1-\pi}{\pi}\cdot \left(\text{se}\left( \hat\beta_{X}\right)\right)^2$. Therefore, we can write the following: 
+
+$$\left( \hat\beta_{X_\pi} | \hat\beta_{X} \right) \sim N \left( \hat\beta_X, \left(\frac{1-\pi}{\pi}\right)\cdot(\text{se}(\hat\beta_{X}))^2 \right)$$
+
+
+We are in fact interested in the distribution of $\hat{z}_{X_{\pi}}$. However, as this is simply equal to $\hat\beta_{X_\pi}$ multiplied by the scalar $\frac{1}{\sqrt{\frac{1}{\pi}\cdot \left(\text{se}\left( \hat\beta_{X}\right)\right)^2}}$, we can use the distribution above to form the following:
+
+$$\left( \frac{\hat\beta_{X_\pi}}{\sqrt{\frac{1}{\pi}\cdot \left(\text{se}\left( \hat\beta_{X}\right)\right)^2}} \middle| \hat\beta_{X} \right) = \left( \hat{z}_{X_{\pi}} | \hat\beta_{X} \right) \sim N \left( \frac{\hat\beta_X}{\sqrt{\frac{1}{\pi}\cdot \left(\text{se}\left( \hat\beta_{X}\right)\right)^2}}, \frac{\left(\frac{1-\pi}{\pi}\right)\cdot(\text{se}(\hat\beta_{X}))^2}{\frac{1}{\pi}\cdot \left(\text{se}\left( \hat\beta_{X}\right)\right)^2} \right)$$
+
+Tidying the above up and defining $\hat{z}_{X} = \frac{\hat\beta_{X}}{\sqrt{\left(\frac{1}{\pi}\right)\cdot(\text{se}(\hat\beta_{X}))^2}}$, we get:
+
+$$\left( \hat{z}_{X_{\pi}} | \hat\beta_{X} \right) \sim N \left( \hat{z}_{X}, 1-\pi \right)$$
+
+Therefore, using this result, the probability of a SNP to be selected on a given iteration, $f(\left| \hat{z}_{X_{\pi}} \right| > 5.45)$ can be easily derived as follows, in which $\Phi$ is the cumulative distribution function of a standard normal: 
+
+$$f(\left| \hat{z}_{X_{\pi}} \right| > 5.45 ) = \Phi\left(\frac{- 5.45 + \hat{z}_{X}}{\sqrt{1-\pi}}\right) + \Phi\left(\frac{- 5.45 - \hat{z}_{X}}{\sqrt{1-\pi}}\right)$$
+
+[$\star$]{style="color: blue;"} **Note:** Recall that the value of $\hat{z}_X$ is known for each SNP. Thus, $f(\left| \hat{z}_{X_{\pi}} \right| > 5.45)$ can be quickly worked out for each SNP using the above. 
+
+Now that we have shown that we can easily work out the probability of each SNP to be selected on a given iteration, the question of interest turns to how might we use these probabilities to choose which SNPs to contain in the subset of SNPs that will be used in our method. We first considered that perhaps we could simply choose those SNPs in which this probability is greater than a chosen value. For example, choosing this value to be 0.01, SNPs which have $f(\left| \hat{z}_{X_{\pi}} \right| > 5.45) \ge 0.01$, would then be selected into the subset and used in our method. However, this approach could prove to be potentially problematic if we were presented with a data set which, for some reason, had thousands of SNPs with a probability of selection just below 1%. In the case where we use the entire set of SNPs in our method, many of these SNPs would actually turn out to be instruments while in this restricted version concerning only a subset of SNPs, these SNPs would all be excluded. 
+
+Given the above, we consider a different approach in which we lower bound the probability that the restricted version and the full version will result in the same instruments, i.e. the same SNPs being selected. Upon working out $f(\left| \hat{z}_{X_{\pi}} \right| > 5.45)$ for each SNP, we then order all SNPs by these probabilities from smallest to largest. Following this ordering, we obtain the cumulative sum of these probabilities. Note that in this case, the largest cumulative sum is then equivalent to the expected number of instruments when the full set of SNPs is used in our method. We could then choose all SNPs for which the **cumulative probability is greater than 0.05** for our subset. This process should ensure that for a single iteration of our method, the number of instruments if the full set of SNPs is used and the number of instruments if merely the subset is used will be equal with probability at least 95%. The point where we subset the SNPs, i.e. 0.05 here, can also be interpreted as the expected difference in the number of instruments if the full set of SNPs is used and the number of instruments if the subset is used. Thus, this cumulative probability approach gives an extra probabilistic guarantee that the results obtained using the full set of SNPs and those obtained using the subset will be very similar in terms of the number of, and actual, instruments included.
+
+
+[$\star$]{style="color: blue;"} **Example:** For example, if our data set of interest originally had 100,000 SNPs such as the example data set, `data`, below, applying our proposed method would result in simulating values for $\hat\beta_{X_\pi}$ and  $\hat\beta_{Y_\pi}$ for all of those SNPs a total of $N_{\text{iter}}$ times. Assuming that $\pi =0.5$ and the $p$-value threshold for selection is $5 \times 10^{-8}$, we could obtain the probability of selection for each SNP using our derivation above, namely `p.exposure1`. Following, this we can easily compute the cumulative sums by first ordering the SNPs and then using the function `cumsum`. Finally, all SNPs for which this cumulative sum is less than 0.05 are removed. It can be seen below that we are left 436 SNPs, which is clearly a great reduction in SNP numbers compared to the original 100,000. This means that computation time would be greatly reduced, allowing us to then increase the value of $N_{\text{iter}}$.
+
+
+```{r}
+## Simulate entire data set:
+set.seed(1998)
+data <- sim_mr_stats(n_snps=10^5,prop_effect=0.01,h2=0.4,frac_overlap=1,n_x=100000,n_y=100000,cor_xy=0.6,beta_xy=0.3) 
+
+## Obtain probabilities of selection:
+pi <- 0.5
+thresh1 <- stats::qnorm((5e-8)/2, lower.tail=FALSE)
+data$mu.exposure1 <- data$beta.exposure/sqrt(((1)/(pi))*(data$se.exposure)^2)
+data$p.exposure1 <- pnorm((-thresh1 + data$mu.exposure1)/(sqrt(1-pi))) + pnorm((-thresh1 - data$mu.exposure1)/(sqrt(1-pi)))
+
+## Obtain cumulative sum of probabilities:
+data1 <- data[order(data$p.exposure1,decreasing=FALSE),]
+data1$cumul.sum <- cumsum(data1$p.exposure1)
+
+## Remove SNPs with cumulative sum less than 0.05:
+data1 <- data1[-which(data1$cumul.sum < 0.05),]
+nrow(data1) 
+```
+
+
+<br><br>
+
+## Using `mr.simss`
+
+We have created an R package, `mr.simss`, which allows us to implement the approach that we have proposed in this document. `mr.simss` can be installed as follows: 
+
+```{r}
+remotes::install_github("amandaforde/mr.simss")
+library(mr.simss)
+```
+
+
+We can now briefly demonstrate how the functions in this package may be used in order to obtain MR causal effect estimates using GWAS summary statistics. Firstly, we will consider a fully overlapping toy data set in which the causal effect of the exposure on the outcome is **0.3**. We use the function created above, `sim_mr_stats` to do so and view the first six rows of our simulated data set.
+
+```{r}
+set.seed(1998)
+data <- sim_mr_stats(n_snps=10^5,prop_effect=0.01,h2=0.4,frac_overlap=1,n_x=100000,n_y=100000,cor_xy=0.6,beta_xy=0.3) 
+head(data)
+```
+
+
+Before we implement our method from `mr.simss`, we consider first using the `mr` function from the `TwoSampleMR` R package which applies the following well-known method, IVW, and obtains the MR causal effect estimate: 
+
+```{r}
+data_mr <- tibble::tibble(
+      SNP = data$SNP,
+      id.exposure="X",
+      id.outcome="Y",
+      exposure="X",
+      outcome="Y",
+      beta.exposure = data$beta.exposure,
+      beta.outcome = data$beta.outcome,
+      se.exposure = data$se.exposure,
+      se.outcome = data$se.outcome,
+      mr_keep=TRUE
+    )
+
+data_sig <- data_mr %>% dplyr::filter(2*(stats::pnorm(abs(data_mr$beta.exposure/data_mr$se.exposure), lower.tail=FALSE)) < 5e-8)
+data_sig %>% TwoSampleMR::mr(data_mr,method_list=c("mr_ivw"))
+```
+
+We also consider applying the MR-RAPS method to this data set as follows:
+
+```{r}
+library(mr.raps)
+results <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+data.frame(method="mr_raps", nsnp=nrow(data_sig), b=results$beta.hat, se=results$beta.se, pval=results$beta.p.value)
+```
+
+<br>
+
+The **main function** in the package is `mr_simss` which executes the method, **MR-SimSS**. We can apply `mr_simss` directly to our simulated data set, assuming that we have knowledge of the number of samples in both outcome and exposure GWASs, the number of overlapping samples between the two GWASs, and the correlation between the exposure and the outcome. As the default setting of the parameter `n.iter`, `n.iter=1000` can be quite computationally intensive, we will use `n.iter=100` for demonstration purposes. Also, note that as we are aware that we are dealing with fully overlapping samples, it is advisable to use the 3 split approach. Therefore, we set `splits=3`.
+
+```{r}
+mr.simss::mr_simss(data,n.exposure=100000,n.outcome=100000,n.overlap=100000,cor.xy=0.6,n.iter=100,splits=3,parallel=TRUE)$summary
+```
+
+
+As mentioned above, for large values of `n.iter`, applying our proposed approach to the entire data set can be quite computationally intensive. We have discussed this in the section *"Reducing SNP numbers"* and described a way in which we could obtain a subset of SNPs and simply apply our method to just the SNPs in that subset, resulting in a great reduction in computational time. Changing the parameter `subset` in the `mr_simss` function from its default setting `subset=FALSE` to `subset=TRUE` allows us to use the **MR-SimSS** method with a smaller subset of SNPs. Note that the value for `sub.cut` determines a cut-off point for inclusion of SNPs into the subset based on cumulative probabilities. The default value is `sub.cut=0.05`. Further details regarding the manner in which SNPs are selected into the subset are provided in the section above. Due to the reduction in computational time by using `subset=TRUE`, this then allows us to increase `n.iter`.
+
+```{r}
+mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,n.exposure=100000,n.outcome=100000,n.overlap=100000,cor.xy=0.6,n.iter=1000,splits=3,parallel=TRUE)$summary
+```
+
+Now, let us explicitly examine how much we save in computational time by using the subset approach for this example. We also note that our full data set here has only 100,000 SNPs. It is quite likely that a real data set would have more than this, meaning much greater computational time for only $N_{\text{iter}} = 100$ iterations of the method. Firstly, using the full data set of 100,000 SNPs with our method and carrying out 100 iterations takes about 2.73 minutes.
+
+```{r}
+start.time <- Sys.time()
+full <- mr.simss::mr_simss(data,n.exposure=100000,n.outcome=100000,n.overlap=100000,cor.xy=0.6,n.iter=100,splits=3,parallel=TRUE)
+end.time <- Sys.time()
+round(end.time - start.time,2)
+```
+
+Following this, we can see that using the subset approach for 1000 iterations takes only 19.01 seconds, which is a reduction in computational time of approximately 88%, while the number of iterations have been increased 10-fold.  
+
+```{r}
+start.time <- Sys.time()
+sub <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,n.exposure=100000,n.outcome=100000,n.overlap=100000,cor.xy=0.6,n.iter=1000,splits=3,parallel=TRUE)
+end.time <- Sys.time()
+round(end.time - start.time,2)
+```
+
+
+In addition, we could have used the function `est_lambda` to first estimate *lambda* and then use this value with `mr_simss`. We demonstrate this as follows:
+
+```{r}
+lambda <- est_lambda(data)
+mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=lambda,n.iter=1000,splits=3,parallel=TRUE)$summary
+```
+
+
+Note that in all our examples so far we have used the default MR method, IVW, with our approach. We now have a look at using MR-RAPS with our approach. MR-RAPS has the additional benefit that it also assists in eliminating weak instrument bias. 
+
+```{r}
+mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=lambda,n.iter=1000,splits=3,mr_method="mr_raps",parallel=TRUE)$summary
+```
+
+As our method works in combination with other MR methods, as shown here with IVW and MR-RAPS, it is also possible to use `mr_simss` with other pleiotropy robust approaches, such as weighted median and weighted mode. We demonstrate this below. However, in this instance, these two methods do not seem to perform as well MR-RAPS and IVW. 
+
+```{r}
+mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=lambda,n.iter=100,splits=3,mr_method="mr_weighted_median",parallel=TRUE)$summary
+```
+
+```{r}
+mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=lambda,n.iter=100,splits=3,mr_method="mr_weighted_mode",parallel=TRUE)$summary
+```
+
+<br>
+
+[$\star$]{style="color: blue;"} **Note:** Naturally, it is difficult to see if our approach,  **MR-SimSS**, is in fact performing well and obtaining *bias-reduced* causal effect estimates by illustrating its implementation with just one simulated data set. Therefore, the next step is thus to consider performing a **simulation study** which would incorporate simulating many different data sets and comparing our approach with other currently published methods. 
+
+
+<br><br>
+
+## Simulation study design
+
+When designing our simulation study, there are several things to consider and keep in mind:
+
+i) Firstly, we must decide on what **other methods** should we include in our study and thus, compare our proposed method against. 
+
+ii) We must consider what **simulation parameters** should we adjust, e.g. sample size, fraction of overlap, true causal effect, heritability and polygenicity of exposure, correlation between exposure and outcome, and the total number of SNPs, and what values they should take.
+
+iii) In addition, the current way in which we are creating our simulated data sets does not take into account any balanced or directional **pleiotropy**, a characteristic that is regularly seen in real data scenarios. 
+
+[$\star$]{style="color: blue;"} **Note:** Above, we have discussed several variations of our method. Thus, when designing our simulation study, this gives rise to the following key considerations:
+
+- [**Question:**]{style="color: Purple;"} *Should we use the full data set of SNPs with our method or obtain a* ***subset***, *as described above, and use only that smaller set of SNPs with the method? If we choose the subset approach, is the value of 0.05 most appropriate for `sub.cut`?* [**Discussion:**]{style="color: Purple;"} The benefit of using the smaller set of SNPs is that it will *significantly* reduce computation time and thus, allow us to increase the number of iterations, `n.iter`, to 1000, which has been seen, in brief experimentation, to produce a more stable estimate than `n.iter=100`. Furthermore, it is anticipated that an approach with a much smaller computational time would be of more interest to researchers. From above, 0.05 does seem appropriate for `sub.cut` although it could possibly be reduced further to 0.01, say. Indeed, this is perhaps an area for further investigation in which there could be other variants of the approach which differ in the means of obtaining a suitable cut-off point.  
+
+- [**Question:**]{style="color: Purple;"} *Should we* ***estimate*** ***lambda*** *using `est_lambda()` or will we assume that the values of `n.exposure`, `n.outcome`, `n.overlap` and `cor.xy` are all known?* [**Discussion:**]{style="color: Purple;"} Of course, this is only of interest to use when the fraction of overlap is greater than 0, i.e. when we don't have two fully independent outcome and exposure GWAS data sets. The hesitation of using `est_lambda()` is due to the fact that the estimate of *lambda* it provides has been shown to have a high degree of variance, even if it is unbiased. We currently do not know how using a highly variable estimate of *lambda* in our method may affect our causal effect estimate. Perhaps the key question is 'do we generally expect researchers to know the number of samples in each GWAS, the number of overlapping samples and the correlation between the exposure and the outcome, or at least be able to estimate these values very well?' If the researcher has access to the individual-level data, these values would be very easily obtainable. Therefore, it is perhaps reasonable to test our approach using the default setting of `est.lambda=FALSE` with *known* values of `n.exposure`, `n.outcome`, `n.overlap` and `cor.xy`. That said, a certain avenue for further research would be to see how sensitive our method is to variable estimates of *lambda*. 
+
+- [**Question:**]{style="color: Purple;"} *For all fractions of overlap, should we test both `splits=2` and `splits=3`?* [**Discussion:**]{style="color: Purple;"} An alternative here would be to suggest using `splits=2` only when the outcome and exposure GWASs have employed two independent non-overlapping samples. Otherwise, for any degree of overlap, `splits=3` may be considered as the safer option in order to avoid weak instrument bias in the direction of the observational association. However, it could be interesting to see in simulations how `splits=2` and `splits=3` perform in each overlap scenario.
+
+
+- [**Question:**]{style="color: Purple;"} *Is it okay to simply leave the* ***splitting fractions at 50%***, *i.e. `pi=0.5` and `pi2=0.5`, or will further theoretical justification for the reason for choosing these fractions be required?* [**Discussion:**]{style="color: Purple;"} Again, this question presents another avenue for further work and exploration. However, it could be potentially difficult to come up with a single theoretical rule for these splitting fractions as it is likely that optimal fractions will change based on the genetic architectures of the exposure and outcome. We feel that it is perhaps more important to present our initial proposal of the method and demonstrate its effectiveness rather than obtaining optimal values for each parameter of our method. In practice, with individual-level data, in order to avoid *Winner's Curse*, it has been seen that researchers tend to split their entire data set in two and use half of the samples for selecting/discovering the instrument SNPs and the other half for estimating the SNP-exposure effect sizes. In fact, this idea of optimising discovery/replication sample splits for MR analysis is mentioned in the work of [Sadreev et al. (2021)](https://www.medrxiv.org/content/10.1101/2021.06.28.21259622v1) where they state that they "determined that splitting the UK Biobank sample into two sets of 50% each would provide the most flexibility". Therefore, this gives us at least some justification for choosing `pi=0.5`, which means that at each iteration, simulated values corresponding to half of the entire data set will be used for the purpose of SNP selection. Naturally, this does mean that as the sample size for selection is decreased compared to that of the full data set, we do expect less SNPs to be selected as instruments on a given iteration than if we were to use the full data set for selection. In the three split approach, we have chosen to continue to use half of the data set for selection. The reason for this is that we want to ensure that a good quantity of instruments are still being selected at each iteration. Of course, this means that smaller sample sizes are then used in estimating the SNP-exposure and SNP-outcome effect sizes, which can result in an increase in variance of our causal effect estimate. However, as we can increase the number of iterations of our approach as high as potentially $N_{\text{iter}} = 1000$ and our final causal effect estimate is the mean of the estimates at each iteration, this high number of iterations can reverse the increase in variance and allow us to obtain a much more stable final causal effect estimate. For these reasons, we feel that simply setting the values `pi=0.5` and `pi2=0.5` and using these defaults is appropriate for this stage of our work. 
+
+
+- [**Question:**]{style="color: Purple;"} *Should we consider using a value greater than $5 \times 10^{-8}$ for the* ***selection threshold*** *or is it appropriate to simply leave it as `threshold=5e-8`?* [**Discussion:**]{style="color: Purple;"} The selection threshold is perhaps another parameter that deserves the same treatment as the splitting fractions above, in the sense that time could be dedicated to investigating if using a less stringent threshold would be more suitable, but for now it is perhaps more sensible to simply remaining using a default value. For that reason, we will continue to simply use the genome-wide threshold of $5 \times 10^{-8}$ for selection purposes in our proposed method. 
+
+- [**Question:**]{style="color: Purple;"} *What* ***MR methods*** *should we consider to work in combination with our method?* [**Discussion:**]{style="color: Purple;"} As mentioned above, our proposed approach requires the use of other MR methods to work in conjunction with it. We first investigate using the IVW method with our approach as this is perhaps the simplest MR method, and much work has been done in the field to suggest improvements to this straightforward approach. However, we have seen that even though *Winner's Curse* bias will be removed from using our approach with IVW, it is possible that a certain amount of weak instrument bias will still exist, especially due to the simulated sample splitting procedure. As MR-RAPS is a well-known method that can alleviate this weak instrument bias, we have also considered using MR-RAPS with our approach. This combination has been seen to work really well in practice, especially in the case where we have a single fully overlapping data set and use `splits=3`. It is possible that other pleiotropy-robust approaches could be considered, however it is perhaps sensible to focus on IVW and MR-RAPS and to dedicate investigating the performance of these other MR methods in conjunction with our approach to another time for similar reasons as those mentioned above, e.g. time constraints etc.  
+
+<br>
+
+### Other methods
+
+The first point mentioned above regarding the simulation study design suggested that we must decide on what other methods we should include in our study for comparison purposes. The following recently published papers can give us an idea regarding this: [*"Breaking the Winner's Curse in Mendelian Randomization: Rerandomized Inverse Variance Weighted Estimator"*](https://arxiv.org/pdf/2302.10470v1.pdf), [*"Bias correction for inverse variance weighting Mendelian randomization"*](https://onlinelibrary.wiley.com/doi/epdf/10.1002/gepi.22522) and [*"Incorporating discovery and replication GWAS into summary data Mendelian randomization studies: A review of current methods and a simple, general and powerful alternative"*](https://www.biorxiv.org/content/10.1101/2023.01.12.523708v2.full.pdf). 
+
+Naturally, we will compare our method against just simply using **IVW** and **MR-RAPS** on the entire data set and selecting instruments based on this entire data set. 
+
+[$\star$]{style="color: blue;"} **Question:** Should we also consider using two-sample/three-sample forms of IVW and MR-RAPS in our simulations? For example, suppose we simulated two fully independent data sets of summary statistics for exposure and outcome, with a sample size each of 100,000 say. If we were to consider three-sample IVW in this setting, would we then have to use our simulation approach to simulate a sample split of 50,000 and 50,000 and use the first split to select instruments and the second split for the SNP-exposure effect sizes? Can we just use the original simulated SNP-outcome effect sizes then? 
+
+
+[$\star$]{style="color: blue;"} **Note:** It is also possible for us to consider returning to our previous work and applying some of the *Winner's Curse* correction methods discussed in [*"Review and further developments in statistical corrections for Winner's Curse in genetic association studies"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546), such as the **empirical Bayes and bootstrap methods**, and using the resulting adjusted SNP-exposure association estimates in the IVW method. For example, the code for doing so together with an example which uses our above simulated data set is provided as follows.
+
+
+```{r}
+library(winnerscurse)
+
+mr_ivw_EB <- function(data, threshold=5e-8){
+	## obtain adjusted estimate
+  data.exp <- data.frame(rsid=data$SNP,beta=data$beta.exposure,se=data$se.exposure)
+  data.exp.EB <- empirical_bayes(data.exp)
+  data.exp.EB <- data.exp.EB[order(data.exp.EB$rsid,decreasing=FALSE),]
+  data$beta.exposure.EB <- data.exp.EB$beta_EB
+  ## subset data set
+  data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < threshold)
+  if(nrow(data_sig) < 3){return(NULL)}else{
+  ivw.res <- summary(stats::lm(data_sig$beta.outcome ~ -1 + data_sig$beta.exposure.EB, weights = 1/data_sig$se.outcome^2))
+	b <- ivw.res$coef[1,1]
+	se <- ivw.res$coef[1,2]/min(1,ivw.res$sigma) 
+	pval <- 2 * stats::pnorm(abs(b/se), lower.tail=FALSE)
+	return(data.frame(method="mr_ivw_EB", nsnp=nrow(data_sig), b=b, se=se, pval=pval))
+  }
+}
+
+mr_ivw_boot <- function(data, threshold=5e-8){
+	## obtain adjusted estimate
+  data.exp <- data.frame(rsid=data$SNP,beta=data$beta.exposure,se=data$se.exposure)
+  data.exp.boot <- BR_ss(data.exp)
+  data.exp.boot <- data.exp.boot[order(data.exp.boot$rsid,decreasing=FALSE),]
+  data$beta.exposure.boot <- data.exp.boot$beta_BR_ss
+  ## subset data set
+  data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < threshold)
+  if(nrow(data_sig) < 3){return(NULL)}else{
+  ivw.res <- summary(stats::lm(data_sig$beta.outcome ~ -1 + data_sig$beta.exposure.boot, weights = 1/data_sig$se.outcome^2))
+	b <- ivw.res$coef[1,1]
+	se <- ivw.res$coef[1,2]/min(1,ivw.res$sigma) 
+	pval <- 2 * stats::pnorm(abs(b/se), lower.tail=FALSE)
+	return(data.frame(method="mr_ivw_boot", nsnp=nrow(data_sig), b=b, se=se, pval=pval))
+  }
+}
+
+```
+
+
+```{r}
+mr_ivw_EB(data,threshold=5e-8)
+```
+
+
+```{r}
+mr_ivw_boot(data,threshold=5e-8)
+```
+
+<br>
+
+Interestingly, the three papers mentioned above are all quite different in their approaches to performing a simulation study. Firstly,
+[*"Breaking the Winner's Curse in Mendelian Randomization: Rerandomized Inverse Variance Weighted Estimator"*](https://arxiv.org/pdf/2302.10470v1.pdf) simulates suitable summary statistics and considers the proposed **RIVW** estimator together with classical two-/three-sample IVW, debiased IVW (dIVW) and two/three-sample RAPS estimator. All simulations involve two independent non-overlapping samples. 
+In their three-sample MR analyses for IVW and MR-RAPS, they "generate a new independent exposure data with the same sample size for IV selection". This is different from the approach considered above for three-sample IVW. 
+
+[$\star$]{style="color: blue;"} **Note:** Code for the RIVW method proposed in this paper does not seem to have been made available. 
+
+
+Secondly, [*"Bias correction for inverse variance weighting Mendelian randomization"*](https://onlinelibrary.wiley.com/doi/epdf/10.1002/gepi.22522) 
+proposed the **MRlap** method and compares it to RAPS, IVW, dIVW, weighted median and weighted mode. However, we note that their simulation approach makes use of genotypic data and thus, differs in our approach where we would just be simulating summary statistics. They essentially simulate individual-level data and subsequently perform a GWAS using BGENIE for each repetition of each simulation scenario. It appears that for most methods, instruments are selected using the same data set with a $p$-value threshold of $5 \times 10^{-8}$. It is mentioned that "using a third sample to select instruments and avoid winner's curse was out of the scope of the paper".
+
+We note that in a section of their study they compare "corrected effects obtained using the full (overlapping) sample to IVW-based effects obtained by splitting it into two halves to avoid sample overlap." This is perhaps something we could consider in the case of full overlap in our simulations. Thus potentially in the case of full overlap we could consider one-sample, two-sample and three-sample IVW and in the case of no overlap we would just need to consider two-sample and three-sample IVW. We described briefly above how we might go about this. 
+
+[$\star$]{style="color: blue;"} **Note:** Code for MRlap is available on GitHub. However, upon looking at the required inputs for the function `mrlap`, it may be difficult for us to include MRlap in our simulation study. 
+
+Finally, [*"Incorporating discovery and replication GWAS into summary data Mendelian randomization studies: A review of current methods and a simple, general and powerful alternative"*](https://www.biorxiv.org/content/10.1101/2023.01.12.523708v2.full.pdf) considers **regression calibration with IVW** and compares it to naive IVW, 3-sample IVW, 3-sample MR-RAPS, MR-RAPS with ZP and MR-RAPS with UMVCUE. It is noted in this paper that MRlap requires "genome-wide information about SNP-exposure and SNP-outcome associations (not only instruments) to estimate the underlying parameters needed for the correction." However, it is also mentioned that "sample overlap...is not relevant to the scope of this paper". Due to the requirement of genome-wide information MRlap is omitted from the simulation study in this paper and only used with real data. As we intend to perform our simulation study in a similar manner by merely simulating summary statistics, we may also be **unable to include MRlap** in that part of our work. 
+
+[$\star$]{style="color: blue;"} **Note:** Code for regression calibration is available on GitHub. Similar to our approach, regression calibration is used in collaboration with other MR methods such as IVW, simple/weighted median and simple/weighted mode.  
+
+In this paper, three non-overlapping independent samples are generated in all simulations, i.e. discovery, replication and outcome. Regression calibration requires independent discovery and replication samples. If we were to include it in our study, we would need to consider splitting our original simulated samples in order to produce independent discovery and replication samples.
+
+
+In two out of three of the above papers, the debiased IVW method, **dIVW**, is also considered. The authors of this method recommend using all available SNPs to estimate the causal effect. Code is available to implement the dIVW method from the `mr.divw` R package. However, if we use this package as follows and apply `mr.divw` to our previously simulated data set, we get the following result. It can be seen that the result is clearly extremely biased here and thus, further investigation is required here before considering using `mr.divw` in our simulation study. However, if we actually do select SNPs and apply the method to just those SNPs with $p$-values less than $5 \times 10^{-8}$, it can be seen that the result is much closer to what we might expect.
+
+
+```{r}
+library(mr.divw)
+
+mr_divw <- function(data,sig_SNPs=FALSE,threshold=5e-8){
+  if(sig_SNPs==TRUE){
+     data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < threshold)
+     res.divw <- mr.divw(data_sig$beta.exposure, data_sig$beta.outcome, data_sig$se.exposure, data_sig$se.outcome, diagnostics=FALSE)
+     return(data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE))))
+  }else{
+     res.divw <- mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+     return(data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE))))
+  }
+}
+
+mr_divw(data)
+```
+
+
+```{r}
+mr_divw(data,sig_SNPs=TRUE)
+```
+
+
+
+
 
 
