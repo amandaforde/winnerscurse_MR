@@ -1363,7 +1363,7 @@ As mentioned above, for large values of `n.iter`, applying our proposed approach
 mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,n.exposure=100000,n.outcome=100000,n.overlap=100000,cor.xy=0.6,n.iter=1000,splits=3,parallel=TRUE)$summary
 ```
 
-Now, let us explicitly examine how much we save in computational time by using the subset approach for this example. We also note that our full data set here has only 100,000 SNPs. It is quite likely that a real data set would have more than this, meaning much greater computational time for only $N_{\text{iter}} = 100$ iterations of the method. Firstly, using the full data set of 100,000 SNPs with our method and carrying out 100 iterations takes about 2.73 minutes.
+Now, let us explicitly examine how much we save in computational time by using the subset approach for this example. We also note that our full data set here has only 100,000 SNPs. It is quite likely that a real data set would have more than this, meaning much greater computational time for only $N_{\text{iter}} = 100$ iterations of the method. Firstly, using the full data set of 100,000 SNPs with our method and carrying out 100 iterations takes about 4 minutes.
 
 ```{r}
 start.time <- Sys.time()
@@ -1372,7 +1372,7 @@ end.time <- Sys.time()
 round(end.time - start.time,2)
 ```
 
-Following this, we can see that using the subset approach for 1000 iterations takes only 19.01 seconds, which is a reduction in computational time of approximately 88%, while the number of iterations have been increased 10-fold.  
+Following this, we can see that using the subset approach for 1000 iterations takes only 27.36 seconds, which is a reduction in computational time of approximately 88%, while the number of iterations have been increased 10-fold.  
 
 ```{r}
 start.time <- Sys.time()
