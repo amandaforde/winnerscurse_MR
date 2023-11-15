@@ -1363,7 +1363,7 @@ As mentioned above, for large values of `n.iter`, applying our proposed approach
 mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,n.exposure=100000,n.outcome=100000,n.overlap=100000,cor.xy=0.6,n.iter=1000,splits=3,parallel=TRUE)$summary
 ```
 
-Now, let us explicitly examine how much we save in computational time by using the subset approach for this example. We also note that our full data set here has only 100,000 SNPs. It is quite likely that a real data set would have more than this, meaning much greater computational time for only $N_{\text{iter}} = 100$ iterations of the method. Firstly, using the full data set of 100,000 SNPs with our method and carrying out 100 iterations takes about 4 minutes.
+Now, let us explicitly examine how much we save in computational time by using the subset approach for this example. We also note that our full data set here has only 100,000 SNPs. It is quite likely that a real data set would have more than this, meaning much greater computational time for only $N_{\text{iter}} = 100$ iterations of the method. Firstly, using the full data set of 100,000 SNPs with our method and carrying out 100 iterations takes under 3 minutes.
 
 ```{r}
 start.time <- Sys.time()
@@ -1372,7 +1372,7 @@ end.time <- Sys.time()
 round(end.time - start.time,2)
 ```
 
-Following this, we can see that using the subset approach for 1000 iterations takes only 27.36 seconds, which is a reduction in computational time of approximately 88%, while the number of iterations have been increased 10-fold.  
+Following this, we can see that using the subset approach for 1000 iterations takes only 19.11 seconds, which is a reduction in computational time of approximately 88%, while the number of iterations have been increased 10-fold.  
 
 ```{r}
 start.time <- Sys.time()
@@ -1395,6 +1395,25 @@ Note that in all our examples so far we have used the default MR method, IVW, wi
 ```{r}
 mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=lambda,n.iter=1000,splits=3,mr_method="mr_raps",parallel=TRUE)$summary
 ```
+
+Now we will examine how long it takes use the full data set of 100,000 SNPs with our method and apply MR-RAPS. It can be seen below that it takes a similar amount of time as using the IVW method. 
+
+```{r}
+start.time <- Sys.time()
+full <- mr.simss::mr_simss(data,n.exposure=100000,n.outcome=100000,n.overlap=100000,cor.xy=0.6,n.iter=100,splits=3,mr_method="mr_raps",parallel=TRUE)
+end.time <- Sys.time()
+round(end.time - start.time,2)
+```
+
+We can also see that using the subset approach for 1000 iterations using MR-RAPS also sees a great reduction in computational time.  
+
+```{r}
+start.time <- Sys.time()
+sub <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,n.exposure=100000,n.outcome=100000,n.overlap=100000,cor.xy=0.6,n.iter=1000,splits=3,mr_method="mr_raps",parallel=TRUE)
+end.time <- Sys.time()
+round(end.time - start.time,2)
+```
+
 
 As our method works in combination with other MR methods, as shown here with IVW and MR-RAPS, it is also possible to use `mr_simss` with other pleiotropy robust approaches, such as weighted median and weighted mode. We demonstrate this below. However, in this instance, these two methods do not seem to perform as well MR-RAPS and IVW. 
 
