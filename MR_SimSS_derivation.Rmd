@@ -136,8 +136,6 @@ the following structural equations model linking genotype at a given
 SNP, $G$, a continuous exposure, $X$ and a continuous outcome, $Y$.
 Thus, for a randomly selected individual in the population, genotype,
 exposure and outcome are causally linked via the following equations.
-Note that $\varepsilon_X$, $\varepsilon_Y$ and $U$ are zero mean error
-terms with finite variance.
 
 $$X = \beta_X G + \varepsilon_X + \delta_{u,x}U$$
 $$Y = \beta X + \varepsilon_Y + \delta_{u,y}U$$ Here, the terms
@@ -1337,7 +1335,7 @@ data_mr <- tibble::tibble(
     )
 
 data_sig <- data_mr %>% dplyr::filter(2*(stats::pnorm(abs(data_mr$beta.exposure/data_mr$se.exposure), lower.tail=FALSE)) < 5e-8)
-data_sig %>% TwoSampleMR::mr(data_mr,method_list=c("mr_ivw"))
+TwoSampleMR::mr(data_sig,method_list=c("mr_ivw"))[,5:9]
 ```
 
 We also consider applying the MR-RAPS method to this data set as follows:
@@ -1444,19 +1442,42 @@ iii) In addition, the current way in which we are creating our simulated data se
 
 [$\star$]{style="color: blue;"} **Note:** Above, we have discussed several variations of our method. Thus, when designing our simulation study, this gives rise to the following key considerations:
 
-- [**Question:**]{style="color: Purple;"} *Should we use the full data set of SNPs with our method or obtain a* ***subset***, *as described above, and use only that smaller set of SNPs with the method? If we choose the subset approach, is the value of 0.05 most appropriate for `sub.cut`?* [**Discussion:**]{style="color: Purple;"} The benefit of using the smaller set of SNPs is that it will *significantly* reduce computation time and thus, allow us to increase the number of iterations, `n.iter`, to 1000, which has been seen, in brief experimentation, to produce a more stable estimate than `n.iter=100`. Furthermore, it is anticipated that an approach with a much smaller computational time would be of more interest to researchers. From above, 0.05 does seem appropriate for `sub.cut` although it could possibly be reduced further to 0.01, say. Indeed, this is perhaps an area for further investigation in which there could be other variants of the approach which differ in the means of obtaining a suitable cut-off point.  
+- [**Question:**]{style="color: Purple;"} *Should we use the full data set of SNPs with our method or obtain a* ***subset***, *as described above, and use only that smaller set of SNPs with the method? If we choose the subset approach, is the value of 0.05 most appropriate for `sub.cut`?* 
 
-- [**Question:**]{style="color: Purple;"} *Should we* ***estimate*** ***lambda*** *using `est_lambda()` or will we assume that the values of `n.exposure`, `n.outcome`, `n.overlap` and `cor.xy` are all known?* [**Discussion:**]{style="color: Purple;"} Of course, this is only of interest to use when the fraction of overlap is greater than 0, i.e. when we don't have two fully independent outcome and exposure GWAS data sets. The hesitation of using `est_lambda()` is due to the fact that the estimate of *lambda* it provides has been shown to have a high degree of variance, even if it is unbiased. We currently do not know how using a highly variable estimate of *lambda* in our method may affect our causal effect estimate. Perhaps the key question is 'do we generally expect researchers to know the number of samples in each GWAS, the number of overlapping samples and the correlation between the exposure and the outcome, or at least be able to estimate these values very well?' If the researcher has access to the individual-level data, these values would be very easily obtainable. Therefore, it is perhaps reasonable to test our approach using the default setting of `est.lambda=FALSE` with *known* values of `n.exposure`, `n.outcome`, `n.overlap` and `cor.xy`. That said, a certain avenue for further research would be to see how sensitive our method is to variable estimates of *lambda*. 
+   - [**Discussion:**]{style="color: Purple;"} The benefit of using the smaller set of SNPs is that it will *significantly* reduce computation time and thus, allow us to increase the number of iterations, `n.iter`, to 1000, which has been seen, in brief experimentation, to produce a more stable estimate than `n.iter=100`. Furthermore, it is anticipated that an approach with a much smaller computational time would be of more interest to researchers. From above, 0.05 seems appropriate for `sub.cut` and further reduction of this value to 0.01, say, does not seem necessary, especially given that this value is equal to the expected difference in the number of instruments if the full set of SNPs is used and the number of instruments if the subset is used. Indeed, this is perhaps an area for further investigation in which there could be other variants of the approach which differ in the means of obtaining a suitable cut-off point.  
+   - [**Solution:**]{style="color: Purple;"} In our simulation study, we will **use `subset=TRUE` and `sub.cut=0.05`** as the default setting of our method. 
+   
+<br>
 
-- [**Question:**]{style="color: Purple;"} *For all fractions of overlap, should we test both `splits=2` and `splits=3`?* [**Discussion:**]{style="color: Purple;"} An alternative here would be to suggest using `splits=2` only when the outcome and exposure GWASs have employed two independent non-overlapping samples. Otherwise, for any degree of overlap, `splits=3` may be considered as the safer option in order to avoid weak instrument bias in the direction of the observational association. However, it could be interesting to see in simulations how `splits=2` and `splits=3` perform in each overlap scenario.
+- [**Question:**]{style="color: Purple;"} *Should we* ***estimate*** ***lambda*** *using `est_lambda()` or will we assume that the values of `n.exposure`, `n.outcome`, `n.overlap` and `cor.xy` are all known?* 
+  - [**Discussion:**]{style="color: Purple;"} Of course, this is only of interest to use when the fraction of overlap is greater than 0, i.e. when we don't have two fully independent outcome and exposure GWAS data sets. The hesitation of using `est_lambda()` is due to the fact that the estimate of *lambda* it provides has been shown to have a high degree of variance, even if it is unbiased. We currently do not know how using a highly variable estimate of *lambda* in our method may affect our causal effect estimate. Perhaps the key question is 'do we generally expect researchers to know the number of samples in each GWAS, the number of overlapping samples and the correlation between the exposure and the outcome, or at least be able to estimate these values very well?' If the researcher has access to the individual-level data, these values would be very easily obtainable. Therefore, it is perhaps reasonable to test our approach using the default setting of `est.lambda=FALSE` with *known* values of `n.exposure`, `n.outcome`, `n.overlap` and `cor.xy`. That said, a certain avenue for further research would be to see how sensitive our method is to variable estimates of *lambda*. 
+  - [**Solution:**]{style="color: Purple;"} In our study, we will **use `est.lambda=FALSE` and provide** ***known*** **values of `n.exposure`, `n.outcome`, `n.overlap` and `cor.xy`**. We aim to also run a brief sensitivity study to compare method performance in terms of `est.lambda=FALSE` and `est.lambda=TRUE`.
+  
+<br>
 
+- [**Question:**]{style="color: Purple;"} *For all fractions of overlap, should we test both `splits=2` and `splits=3`?* 
+   - [**Discussion:**]{style="color: Purple;"} An alternative here would be to suggest using `splits=2` only when the outcome and exposure GWASs have employed two independent non-overlapping samples. Otherwise, for any degree of overlap, `splits=3` may be considered as the safer option in order to avoid weak instrument bias in the direction of the observational association. However, it could be interesting to see in simulations how `splits=2` and `splits=3` perform in each overlap scenario.
+  - [**Solution:**]{style="color: Purple;"} In our study, we will **test both forms** of our method, i.e. **`splits=2` and `splits=3`**, as it will be interesting to see which form works best in terms of bias and variance for different degrees of overlap. 
+  
+<br>
 
-- [**Question:**]{style="color: Purple;"} *Is it okay to simply leave the* ***splitting fractions at 50%***, *i.e. `pi=0.5` and `pi2=0.5`, or will further theoretical justification for the reason for choosing these fractions be required?* [**Discussion:**]{style="color: Purple;"} Again, this question presents another avenue for further work and exploration. However, it could be potentially difficult to come up with a single theoretical rule for these splitting fractions as it is likely that optimal fractions will change based on the genetic architectures of the exposure and outcome. We feel that it is perhaps more important to present our initial proposal of the method and demonstrate its effectiveness rather than obtaining optimal values for each parameter of our method. In practice, with individual-level data, in order to avoid *Winner's Curse*, it has been seen that researchers tend to split their entire data set in two and use half of the samples for selecting/discovering the instrument SNPs and the other half for estimating the SNP-exposure effect sizes. In fact, this idea of optimising discovery/replication sample splits for MR analysis is mentioned in the work of [Sadreev et al. (2021)](https://www.medrxiv.org/content/10.1101/2021.06.28.21259622v1) where they state that they "determined that splitting the UK Biobank sample into two sets of 50% each would provide the most flexibility". Therefore, this gives us at least some justification for choosing `pi=0.5`, which means that at each iteration, simulated values corresponding to half of the entire data set will be used for the purpose of SNP selection. Naturally, this does mean that as the sample size for selection is decreased compared to that of the full data set, we do expect less SNPs to be selected as instruments on a given iteration than if we were to use the full data set for selection. In the three split approach, we have chosen to continue to use half of the data set for selection. The reason for this is that we want to ensure that a good quantity of instruments are still being selected at each iteration. Of course, this means that smaller sample sizes are then used in estimating the SNP-exposure and SNP-outcome effect sizes, which can result in an increase in variance of our causal effect estimate. However, as we can increase the number of iterations of our approach as high as potentially $N_{\text{iter}} = 1000$ and our final causal effect estimate is the mean of the estimates at each iteration, this high number of iterations can reverse the increase in variance and allow us to obtain a much more stable final causal effect estimate. For these reasons, we feel that simply setting the values `pi=0.5` and `pi2=0.5` and using these defaults is appropriate for this stage of our work. 
+- [**Question:**]{style="color: Purple;"} *Is it okay to simply leave the* ***splitting fractions at 50%***, *i.e. `pi=0.5` and `pi2=0.5`, or will further theoretical justification for the reason for choosing these fractions be required?*     
+  - [**Discussion:**]{style="color: Purple;"} Again, this question presents another avenue for further work and exploration. However, it could be potentially difficult to come up with a single theoretical rule for these splitting fractions as it is likely that optimal fractions will change based on the genetic architectures of the exposure and outcome. We feel that it is perhaps more important to present our initial proposal of the method and demonstrate its effectiveness rather than obtaining optimal values for each parameter of our method. In practice, with individual-level data, in order to avoid *Winner's Curse*, it has been seen that researchers tend to split their entire data set in two and use half of the samples for selecting/discovering the instrument SNPs and the other half for estimating the SNP-exposure effect sizes. In fact, this idea of optimising discovery/replication sample splits for MR analysis is mentioned in the work of [Sadreev et al. (2021)](https://www.medrxiv.org/content/10.1101/2021.06.28.21259622v1) where they state that they "determined that splitting the UK Biobank sample into two sets of 50% each would provide the most flexibility". Therefore, this gives us at least some justification for choosing `pi=0.5`, which means that at each iteration, simulated values corresponding to half of the entire data set will be used for the purpose of SNP selection. Naturally, this does mean that as the sample size for selection is decreased compared to that of the full data set, we do expect less SNPs to be selected as instruments on a given iteration than if we were to use the full data set for selection. In the three split approach, we have chosen to continue to use half of the data set for selection. The reason for this is that we want to ensure that a good quantity of instruments are still being selected at each iteration. Of course, this means that smaller sample sizes are then used in estimating the SNP-exposure and SNP-outcome effect sizes, which can result in an increase in variance of our causal effect estimate. However, as we can increase the number of iterations of our approach as high as potentially $N_{\text{iter}} = 1000$ and our final causal effect estimate is the mean of the estimates at each iteration, this high number of iterations can reverse the increase in variance and allow us to obtain a much more stable final causal effect estimate. 
+  
+  - [**Solution:**]{style="color: Purple;"} Due to the above reasons, we feel that **simply setting the values `pi=0.5` and `pi2=0.5`** and using these defaults is appropriate for this stage of our work. 
 
+<br>
 
-- [**Question:**]{style="color: Purple;"} *Should we consider using a value greater than $5 \times 10^{-8}$ for the* ***selection threshold*** *or is it appropriate to simply leave it as `threshold=5e-8`?* [**Discussion:**]{style="color: Purple;"} The selection threshold is perhaps another parameter that deserves the same treatment as the splitting fractions above, in the sense that time could be dedicated to investigating if using a less stringent threshold would be more suitable, but for now it is perhaps more sensible to simply remaining using a default value. For that reason, we will continue to simply use the genome-wide threshold of $5 \times 10^{-8}$ for selection purposes in our proposed method. 
+- [**Question:**]{style="color: Purple;"} *Should we consider using a value greater than $5 \times 10^{-8}$ for the* ***selection threshold*** *or is it appropriate to simply leave it as `threshold=5e-8`?*
+  - [**Discussion:**]{style="color: Purple;"} The selection threshold is perhaps another parameter that deserves the same treatment as the splitting fractions above, in the sense that time could be dedicated to investigating if using a less stringent threshold would be more suitable, but for now it is perhaps more sensible to simply remaining using a default value. 
+  - [**Solution:**]{style="color: Purple;"} For the above reason, we will continue to simply **use the genome-wide threshold of $5 \times 10^{-8}$ for selection** purposes in our proposed method. 
+ 
+<br>
 
-- [**Question:**]{style="color: Purple;"} *What* ***MR methods*** *should we consider to work in combination with our method?* [**Discussion:**]{style="color: Purple;"} As mentioned above, our proposed approach requires the use of other MR methods to work in conjunction with it. We first investigate using the IVW method with our approach as this is perhaps the simplest MR method, and much work has been done in the field to suggest improvements to this straightforward approach. However, we have seen that even though *Winner's Curse* bias will be removed from using our approach with IVW, it is possible that a certain amount of weak instrument bias will still exist, especially due to the simulated sample splitting procedure. As MR-RAPS is a well-known method that can alleviate this weak instrument bias, we have also considered using MR-RAPS with our approach. This combination has been seen to work really well in practice, especially in the case where we have a single fully overlapping data set and use `splits=3`. It is possible that other pleiotropy-robust approaches could be considered, however it is perhaps sensible to focus on IVW and MR-RAPS and to dedicate investigating the performance of these other MR methods in conjunction with our approach to another time for similar reasons as those mentioned above, e.g. time constraints etc.  
+- [**Question:**]{style="color: Purple;"} *What* ***MR methods*** *should we consider to work in combination with our method?* 
+
+  - [**Discussion:**]{style="color: Purple;"} As mentioned above, our proposed approach requires the use of other MR methods to work in conjunction with it. We first investigate using the IVW method with our approach as this is perhaps the simplest MR method, and much work has been done in the field to suggest improvements to this straightforward approach. However, we have seen that even though *Winner's Curse* bias will be removed from using our approach with IVW, it is possible that a certain amount of weak instrument bias will still exist, especially due to the simulated sample splitting procedure. As MR-RAPS is a well-known method that can alleviate this weak instrument bias, we have also considered using MR-RAPS with our approach. This combination has been seen to work really well in practice, especially in the case where we have a single fully overlapping data set and use `splits=3`. It is possible that other pleiotropy-robust approaches could be considered, however it is perhaps sensible to focus on IVW and MR-RAPS and to dedicate investigating the performance of these other MR methods in conjunction with our approach to another time for similar reasons as those mentioned above, e.g. time constraints etc.  
+  - [**Solution:**]{style="color: Purple;"} In our study, we will **focus on applying our proposed approach with only IVW and MR-RAPS.**
 
 <br>
 
@@ -1466,10 +1487,8 @@ The first point mentioned above regarding the simulation study design suggested 
 
 Naturally, we will compare our method against just simply using **IVW** and **MR-RAPS** on the entire data set and selecting instruments based on this entire data set. 
 
-[$\star$]{style="color: blue;"} **Question:** Should we also consider using two-sample/three-sample forms of IVW and MR-RAPS in our simulations? For example, suppose we simulated two fully independent data sets of summary statistics for exposure and outcome, with a sample size each of 100,000 say. If we were to consider three-sample IVW in this setting, would we then have to use our simulation approach to simulate a sample split of 50,000 and 50,000 and use the first split to select instruments and the second split for the SNP-exposure effect sizes? Can we just use the original simulated SNP-outcome effect sizes then? 
 
-
-[$\star$]{style="color: blue;"} **Note:** It is also possible for us to consider returning to our previous work and applying some of the *Winner's Curse* correction methods discussed in [*"Review and further developments in statistical corrections for Winner's Curse in genetic association studies"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546), such as the **empirical Bayes and bootstrap methods**, and using the resulting adjusted SNP-exposure association estimates in the IVW method. For example, the code for doing so together with an example which uses our above simulated data set is provided as follows.
+[$\star$]{style="color: blue;"} **Note:** It is also possible for us to consider returning to our previous work and applying some of the *Winner's Curse* correction methods discussed in [*"Review and further developments in statistical corrections for Winner's Curse in genetic association studies"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546), such as the **empirical Bayes method**, and using the resulting adjusted SNP-exposure association estimates in the IVW method. For example, the code for doing so together with an example which uses our above simulated data set is provided as follows.
 
 
 ```{r}
@@ -1491,24 +1510,6 @@ mr_ivw_EB <- function(data, threshold=5e-8){
 	return(data.frame(method="mr_ivw_EB", nsnp=nrow(data_sig), b=b, se=se, pval=pval))
   }
 }
-
-mr_ivw_boot <- function(data, threshold=5e-8){
-	## obtain adjusted estimate
-  data.exp <- data.frame(rsid=data$SNP,beta=data$beta.exposure,se=data$se.exposure)
-  data.exp.boot <- BR_ss(data.exp)
-  data.exp.boot <- data.exp.boot[order(data.exp.boot$rsid,decreasing=FALSE),]
-  data$beta.exposure.boot <- data.exp.boot$beta_BR_ss
-  ## subset data set
-  data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < threshold)
-  if(nrow(data_sig) < 3){return(NULL)}else{
-  ivw.res <- summary(stats::lm(data_sig$beta.outcome ~ -1 + data_sig$beta.exposure.boot, weights = 1/data_sig$se.outcome^2))
-	b <- ivw.res$coef[1,1]
-	se <- ivw.res$coef[1,2]/min(1,ivw.res$sigma) 
-	pval <- 2 * stats::pnorm(abs(b/se), lower.tail=FALSE)
-	return(data.frame(method="mr_ivw_boot", nsnp=nrow(data_sig), b=b, se=se, pval=pval))
-  }
-}
-
 ```
 
 
@@ -1517,34 +1518,28 @@ mr_ivw_EB(data,threshold=5e-8)
 ```
 
 
-```{r}
-mr_ivw_boot(data,threshold=5e-8)
-```
-
 <br>
+
+
 
 Interestingly, the three papers mentioned above are all quite different in their approaches to performing a simulation study. Firstly,
 [*"Breaking the Winner's Curse in Mendelian Randomization: Rerandomized Inverse Variance Weighted Estimator"*](https://arxiv.org/pdf/2302.10470v1.pdf) simulates suitable summary statistics and considers the proposed **RIVW** estimator together with classical two-/three-sample IVW, debiased IVW (dIVW) and two/three-sample RAPS estimator. All simulations involve two independent non-overlapping samples. 
-In their three-sample MR analyses for IVW and MR-RAPS, they "generate a new independent exposure data with the same sample size for IV selection". This is different from the approach considered above for three-sample IVW. 
+In their three-sample MR analyses for IVW and MR-RAPS, they "generate a new independent exposure data with the same sample size for IV selection". 
 
 [$\star$]{style="color: blue;"} **Note:** Code for the RIVW method proposed in this paper does not seem to have been made available. 
 
 
 Secondly, [*"Bias correction for inverse variance weighting Mendelian randomization"*](https://onlinelibrary.wiley.com/doi/epdf/10.1002/gepi.22522) 
-proposed the **MRlap** method and compares it to RAPS, IVW, dIVW, weighted median and weighted mode. However, we note that their simulation approach makes use of genotypic data and thus, differs in our approach where we would just be simulating summary statistics. They essentially simulate individual-level data and subsequently perform a GWAS using BGENIE for each repetition of each simulation scenario. It appears that for most methods, instruments are selected using the same data set with a $p$-value threshold of $5 \times 10^{-8}$. It is mentioned that "using a third sample to select instruments and avoid winner's curse was out of the scope of the paper".
+proposed the **MRlap** method and compares it to RAPS, IVW, dIVW, weighted median and weighted mode. However, we note that their simulation approach makes use of genotypic data and thus, differs in our approach where we would just be simulating summary statistics. They essentially simulate individual-level data and subsequently perform a GWAS using BGENIE for each repetition of each simulation scenario. It appears that for most methods, instruments are selected using the same data set with a $p$-value threshold of $5 \times 10^{-8}$. It is mentioned that "using a third sample to select instruments and avoid winner's curse was out of the scope of the paper". We note that in a section of their study they compare "corrected effects obtained using the full (overlapping) sample to IVW-based effects obtained by splitting it into two halves to avoid sample overlap." This is perhaps something we could consider in the case of full overlap in our simulations.  
 
-We note that in a section of their study they compare "corrected effects obtained using the full (overlapping) sample to IVW-based effects obtained by splitting it into two halves to avoid sample overlap." This is perhaps something we could consider in the case of full overlap in our simulations. Thus potentially in the case of full overlap we could consider one-sample, two-sample and three-sample IVW and in the case of no overlap we would just need to consider two-sample and three-sample IVW. We described briefly above how we might go about this. 
+[$\star$]{style="color: blue;"} **Note:** Code for MRlap is available on GitHub. However, upon looking at the required inputs for the function `mrlap`, it may be difficult for us to include MRlap in our simulation study as we are merely simulating summary statistics. 
 
-[$\star$]{style="color: blue;"} **Note:** Code for MRlap is available on GitHub. However, upon looking at the required inputs for the function `mrlap`, it may be difficult for us to include MRlap in our simulation study. 
+Finally, [*"Incorporating discovery and replication GWAS into summary data Mendelian randomization studies: A review of current methods and a simple, general and powerful alternative"*](https://www.biorxiv.org/content/10.1101/2023.01.12.523708v2.full.pdf) considers **regression calibration with IVW** and compares it to naive IVW, 3-sample IVW, 3-sample MR-RAPS, MR-RAPS with ZP and MR-RAPS with UMVCUE. It is noted in this paper that MRlap requires "genome-wide information about SNP-exposure and SNP-outcome associations (not only instruments) to estimate the underlying parameters needed for the correction." However, it is also mentioned that "sample overlap...is not relevant to the scope of this paper". Due to the requirement of genome-wide information MRlap is omitted from the simulation study in this paper and only used with real data. We anticipate that MRlap will receive the same treatment in our work. In this paper, three non-overlapping independent samples are generated in all simulations, i.e. discovery, replication and outcome.
 
-Finally, [*"Incorporating discovery and replication GWAS into summary data Mendelian randomization studies: A review of current methods and a simple, general and powerful alternative"*](https://www.biorxiv.org/content/10.1101/2023.01.12.523708v2.full.pdf) considers **regression calibration with IVW** and compares it to naive IVW, 3-sample IVW, 3-sample MR-RAPS, MR-RAPS with ZP and MR-RAPS with UMVCUE. It is noted in this paper that MRlap requires "genome-wide information about SNP-exposure and SNP-outcome associations (not only instruments) to estimate the underlying parameters needed for the correction." However, it is also mentioned that "sample overlap...is not relevant to the scope of this paper". Due to the requirement of genome-wide information MRlap is omitted from the simulation study in this paper and only used with real data. As we intend to perform our simulation study in a similar manner by merely simulating summary statistics, we may also be **unable to include MRlap** in that part of our work. 
-
-[$\star$]{style="color: blue;"} **Note:** Code for regression calibration is available on GitHub. Similar to our approach, regression calibration is used in collaboration with other MR methods such as IVW, simple/weighted median and simple/weighted mode.  
-
-In this paper, three non-overlapping independent samples are generated in all simulations, i.e. discovery, replication and outcome. Regression calibration requires independent discovery and replication samples. If we were to include it in our study, we would need to consider splitting our original simulated samples in order to produce independent discovery and replication samples.
+[$\star$]{style="color: blue;"} **Note:** Code for regression calibration is available on GitHub. Similar to our approach, regression calibration is used in collaboration with other MR methods such as IVW, simple/weighted median and simple/weighted mode. However, regression calibration requires independent discovery and replication samples, which we do not intend to simulate in our study. 
 
 
-In two out of three of the above papers, the debiased IVW method, **dIVW**, is also considered. The authors of this method recommend using all available SNPs to estimate the causal effect. Code is available to implement the dIVW method from the `mr.divw` R package. However, if we use this package as follows and apply `mr.divw` to our previously simulated data set, we get the following result. It can be seen that the result is clearly extremely biased here and thus, further investigation is required here before considering using `mr.divw` in our simulation study. However, if we actually do select SNPs and apply the method to just those SNPs with $p$-values less than $5 \times 10^{-8}$, it can be seen that the result is much closer to what we might expect.
+In two out of three of the above papers, the debiased IVW method, **dIVW**, is also considered. The authors of this method recommend using all available SNPs to estimate the causal effect. Code is available to implement the dIVW method from the `mr.divw` R package. However, if we use this package as follows and apply `mr.divw` to our previously simulated data set, we get the following result. It can be seen that the result is clearly extremely biased here and thus, further investigation is required here before considering using `mr.divw` in our simulation study. However, if we actually do select SNPs and apply the method to just those SNPs with $p$-values less than $5 \times 10^{-8}$, it can be seen that the result is much closer to what we might expect. That said, this is not the recommended use of the method and if testing the method by means of simulations, it is perhaps better to test it in the form that it is intended to be used. 
 
 
 ```{r}
@@ -1568,9 +1563,1679 @@ mr_divw(data)
 ```{r}
 mr_divw(data,sig_SNPs=TRUE)
 ```
+<br>
+
+[$\star$]{style="color: blue;"} **Question:** Should we also consider using two-sample/three-sample forms of IVW and MR-RAPS in our simulations? For example, suppose we simulated two fully independent data sets of summary statistics for exposure and outcome, with a sample size each of 100,000 say. If we were to consider three-sample IVW in this setting, would we then have to use our simulation approach to simulate a sample split of 50,000 and 50,000 and use the first split to select instruments and the second split for the SNP-exposure effect sizes?  
+
+[$\star$]{style="color: blue;"} **Solution:** Firstly, because we are investigating different degrees of overlap which include both zero overlap and full overlap, when IVW and RAPS are applied to samples with zero overlap, we are essentially evaluating their performance in the two-sample setting. In terms of three-sample IVW/RAPS, we note that these methods were only evaluated in two of the papers above in which they simulated another independent exposure data set of the same size to use for selection purposes. In contrast, in the MRlap paper, it is mentioned that "using a third sample to select instruments and avoid winner's curse was out of the scope of the paper".  
+ 
+In addition to this, we take note of the comments regarding the three-sample MR design in [*"An empirical investigation into the impact of
+winner’s curse on estimates from Mendelian
+randomization"*](https://academic.oup.com/ije/article/52/4/1209/6961569?login=false) in which it is stated that: "...in practice, it is rarely feasible to find three distinct large samples of participants that are sufficiently similar to combine into a single analysis (e.g. same ancestry
+group). Even if it is possible, the loss in sample size (and
+hence power) from not including the discovery GWAS in
+the estimation of genetic associations may be unwelcome.
+Additionally, differences in participant characteristics between samples may mean that genetic variants discovered
+in one data set are not the most relevant predictors of the
+exposure in a second data set." 
+
+For these reasons, we feel that the simulation approach taken by two of these papers in which they simulate a third independent exposure data set of equal size is perhaps not entirely realistic. Therefore, if we were to include comparisons of three-sample IVW/RAPS, the most realistic way of doing so would be to split the exposure data set, as suggested above. In conclusion, in our main study, we believe it is perhaps most sensible to take a similar approach to that of the MRlap paper, in which we do not consider simulating an independent exposure data set to select instruments for three-sample IVW/RAPS. However, we will consider performing a brief study following this in which we compare using our approach on the entire data set against splitting this entire data set into two or three and using a fraction of the data set for instrument selection to avoid *Winner's Curse*.
+
+
+[**Conclusion:**]{style="color: Purple;"} Following our detailed discussion above, we will include the following methods in our simulation study: 
+
+ - MRSimSS-2-IVW
+ - MRSimSS-2-RAPS
+ - MRSimSS-3-IVW
+ - MRSimSS-3-RAPS
+ - IVW 
+ - MR-RAPS
+ - IVW-EB
+ - dIVW
+
+
+### Simulation parameters
+
+The second point regarding simulation study design above indicates that we must also consider what **simulation parameters** to adjust and what would be suitable values for these parameters to take. As illustrated even by the three papers mentioned previously, parameter values for simulation studies are always quite arbitrary and often it is quite difficult to decide on what would be best. In our first main set of simulations, we intend to simulate data using the `sim_mr_stats` function which directly generates GWAS summary statistics for a set of independent SNPs.
+
+
+```{r}
+sim_mr_stats <- function(n_snps, prop_effect, h2, frac_overlap, n_x, n_y, cor_xy, beta_xy){
+  n_overlap <- frac_overlap*min(n_x, n_y)
+  maf <- runif(n_snps, 0.01, 0.5)
+  effect_snps <- n_snps*prop_effect
+  index <- sample(1:n_snps, ceiling(effect_snps), replace=FALSE) # random sampling
+  beta_gx <- rep(0,n_snps)
+  beta_gx[index] <- rnorm(length(index),0,1)
+  var_x <- sum(2*maf*(1-maf)*beta_gx^2)/h2
+  if(var_x != 0){beta_gx <- beta_gx/sqrt(var_x)} # scaling to represent an exposure with variance 1
+  beta_gy <- beta_gx * beta_xy
+
+  var_gx <- 1/(n_x*2*maf*(1-maf)) # var(X)=1
+  var_gy <- 1/(n_y*2*maf*(1-maf)) # var(Y)=1
+  cov_gx_gy <- ((n_overlap*cor_xy)/(n_x*n_y))*(1/(2*maf*(1-maf)))
+  # create covariance matrix for each SNP
+  cov_array <- array(dim=c(2, 2, n_snps))
+  cov_array[1,1,] <- var_gx
+  cov_array[2,1,] <- cov_gx_gy
+  cov_array[1,2,] <- cov_array[2,1,]
+  cov_array[2,2,] <- var_gy
+
+  summary_stats <- apply(cov_array, 3, function(x){MASS::mvrnorm(n=1, mu=c(0,0), Sigma=x)})
+  summary_stats <- t(summary_stats + rbind(beta_gx, beta_gy))
+
+  data <- tibble(
+    SNP = 1:n_snps,
+    beta.exposure = summary_stats[,1],
+    beta.outcome = summary_stats[,2],
+    se.exposure = sqrt(var_gx),
+    se.outcome = sqrt(var_gy)
+  )
+  return(data)
+}
+
+```
+
+
+[$\star$]{style="color: blue;"} **Note:** Simulating summary statistics for `n_snps = 10^6` using this function can be quite computational intensive. For example, we see below that it takes **approx. 2 minutes**. This is something we must take into consideration when designing our simulation study and selecting suitable values for certain parameters, such as `n_snps`.
+
+
+```{r}
+start.time <- Sys.time()
+data_1 <- sim_mr_stats(n_snps=10^6, prop_effect=0.01, h2=0.4, frac_overlap=1, n_x=100000, n_y=100000, cor_xy=0.6, beta_xy=0.3)
+end.time <- Sys.time()
+round(end.time - start.time,2)
+```
+<br>
+
+Due to the computational time for the above function which is primarily due to the use of `mvrnorm`, we consider adapting our function in order to ensure quicker runtime. We can do so by replacing `mvrnorm()` with matrix multiplication as shown below. It can be seen that this greatly reduces the time taken to simulate summary statistics, by a factor of 10. 
+
+
+```{r}
+sim_mr_stats_2 <- function(n_snps, prop_effect, h2, frac_overlap, n_x, n_y, cor_xy, beta_xy){
+  n_overlap <- frac_overlap*min(n_x, n_y)
+  maf <- runif(n_snps, 0.01, 0.5)
+  effect_snps <- n_snps*prop_effect
+  index <- sample(1:n_snps, ceiling(effect_snps), replace=FALSE) # random sampling
+  beta_gx <- rep(0,n_snps)
+  beta_gx[index] <- rnorm(length(index),0,1)
+  var_x <- sum(2*maf*(1-maf)*beta_gx^2)/h2
+  if(var_x != 0){beta_gx <- beta_gx/sqrt(var_x)} # scaling to represent an exposure with variance 1
+  beta_gy <- beta_gx * beta_xy
+
+  var_gx <- 1/(n_x*2*maf*(1-maf)) # var(X)=1
+  var_gy <- 1/(n_y*2*maf*(1-maf)) # var(Y)=1
+  cov_gx_gy <- ((n_overlap*cor_xy)/(n_x*n_y))*(1/(2*maf*(1-maf)))
+  # create covariance matrix for each SNP
+  cov_array <- array(dim=c(2, 2, n_snps))
+  cov_array[1,1,] <- var_gx
+  cov_array[2,1,] <- cov_gx_gy
+  cov_array[1,2,] <- cov_array[2,1,]
+  cov_array[2,2,] <- var_gy
+
+  # summary_stats <- apply(cov_array, 3, function(x){MASS::mvrnorm(n=1, mu=c(0,0), Sigma=x)})
+  # mvrnorm replaced by the following:
+  tr_vec <- apply(cov_array,3,function(x){x[1,1]+x[2,2]})
+  s_vec <- apply(cov_array,3,function(x){sqrt(sum(x[1,1]*x[2,2]-x[1,2]*x[2,1]))})
+  t_vec <- sqrt(tr_vec+2*s_vec)
+  s_vec <- rep(s_vec,times=rep(4,n_snps))
+  I_vec <- rep(c(1,0,0,1),times=rep(n_snps))
+  t_vec <- rep(t_vec,times=rep(4,n_snps))
+  sqrt_array <- array((as.vector(cov_array)+s_vec*I_vec)/t_vec,dim=c(2,2,n_snps))
+
+  Z_array <- array(rnorm(2*n_snps),dim=c(1,2,n_snps))
+  Z_array <- abind::abind(Z_array,Z_array,along=1)
+  sqrt_array_normal <- sqrt_array*Z_array
+  # rearrange array so to use matrix multiplication
+  sqrt_array_normal <- aperm(a=sqrt_array_normal,perm=c(3,1,2))
+  dim1 <- sqrt_array_normal[,1,] %*% matrix(c(1,1),nrow=2)
+  dim2 <- sqrt_array_normal[,2,] %*% matrix(c(1,1),nrow=2)
+  summary_stats <- cbind(dim1,dim2)
+
+  summary_stats <- (summary_stats + cbind(beta_gx, beta_gy))
+
+  data <- tibble(
+    SNP = 1:n_snps,
+    beta.exposure = summary_stats[,1],
+    beta.outcome = summary_stats[,2],
+    se.exposure = sqrt(var_gx),
+    se.outcome = sqrt(var_gy)
+  )
+  return(data)
+}
+```
+
+
+```{r}
+start.time <- Sys.time()
+data_1 <- sim_mr_stats_2(n_snps=10^6, prop_effect=0.01, h2=0.4, frac_overlap=1, n_x=100000, n_y=100000, cor_xy=0.6, beta_xy=0.3)
+end.time <- Sys.time()
+round(end.time - start.time,2)
+```
+<br>
+
+#### Data-generating model
+
+In this section, we will briefly outline the simple data-generating model used in our function above, `sim_mr_stats`. In essence, there are three individual steps that are involved in the simulation process of `sim_mr_stats`:
+
+- **Step 1:** Simulating $\beta_{X1}$ or `beta_gx` for each SNP
+- **Step 2:** Obtaining $\beta_{Y1}$ using the assumption that $\beta_{Y1} = \beta_{XY} \cdot \beta_{X1}$, `beta_gy <- beta_gx * beta_xy`, in which $\beta$ is the true causal effect of the exposure on the outcome
+- **Step 3:** Simulating $\hat\beta_{X1}$ and $\hat\beta_{Y1}$ using the simulated values of $\beta_{X1}$ and $\beta_{Y1}$ and the appropriate variance-covariance matrix
+
+<br>
+
+Firstly, in **Step 1**, in order to generate appropriate values for $\beta_{X1}$, we will take a similar approach to that described in the supplementary material of [*"Review and further developments in statistical corrections for Winner’s Curse in genetic association studies"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546). We assume a set of independent SNPs in which the true effect sizes for an exposure, $X$ follow a normal distribution. $N$ is the total number of SNPs and it is fixed at $N = 1,000,000$ for our simulation study. 
+
+A value is provided for $\pi$, $\pi \in \{0.01,0.001\}$, the proportion of the total SNPs which are truly associated with the exposure. This determines the number of effect SNPs $K = \pi \cdot N, 1 \leq K \leq N$, forming a polygenic background. A minor allele frequency is attained for SNP $i$ using the uniform distribution $\text{maf}_i \sim U[0.01,0.5]$.
+
+Assuming that the true effect sizes, $\beta_{X1_i}$ of associated SNPs follow a Gaussian distribution with mean 0, $\beta_{X1_i}$ is sampled for SNP $i, i = 1, ..., K,$ from the distribution $\beta_{X1_i} \sim N(0, 1)$. Non-effect SNP $i, i=K+1,...,N$, is simply assigned the null true effect size, $\beta{X1_i} = 0$. 
+
+Defining the heritability $h^2$ as the proportion of phenotypic variation, $\text{var}(X)$, that is explained by all SNPs, $\text{var}(X)$ can be computed as 
+
+$$\text{var}(X) = \frac{\sum_{i=1}^K 2 \text{maf}_i (1-\text{maf}_i) \cdot \beta_{X1_i}^2}{h^2}$$
+
+and following this, the true effect sizes are scaled by dividing each by the square root of $\text{var}(X)$ in order to ensure a phenotype with variance 1.
+
+Once we have $\beta_{X1}$ for each SNP, it is very easy to perform **Step 2** as we obtain $\beta_{Y1}$ by simply multiplying $\beta_{X1}$ by $\beta_{XY}$, the causal effect of the exposure on the outcome. 
+
+In order to establish the variance-covariance matrix required in **Step 3**, we will include a derivation of the asymptotic distribution of two-sample summary statistics with overlap. Note that much of this derivation has already been included in the first section above, *"Proposed Method Derivation"*.
+
+<br>
+
+[$\star \;$ **Asymptotic distribution of two-sample summary statistics with overlap:**]{style="color: purple;"}
+
+Let us assume the following structural equations model linking genotype at a given  SNP, $G$, a continuous exposure, $X$ and a continuous outcome, $Y$.
+Thus, for a randomly selected individual in the population, genotype,
+exposure and outcome are causally linked via the following equations.
+
+$$X = \beta_X G + \varepsilon_X + \delta_{u,x}U$$
+$$Y = \beta X + \varepsilon_Y + \delta_{u,y}U$$ 
+
+Here, the terms $\varepsilon_X$, $\varepsilon_Y$ and $U$ are zero mean error terms with
+finite variance. It can be shown that
+$\text{cov}(X,Y) = \beta \cdot \text{var}(X) + \delta_{u,x}\delta_{u,y}\cdot\text{var}(U)$
+and thus, the slope coefficient for the regression of $Y$ on $X$ is only
+unbiased for $\beta$ when there is no confounding, i.e.
+$\delta_{u,x}\delta_{u,y}\cdot\text{var}(U) = 0$.
+
+Suppose we randomly sample $N$ individuals from the populations, with genotypes $G_1,...,G_N$ on the given SNP, with each $G_j \in {0,1,2}$ referring to individual $j$'s genotype at the SNP. We organize genotypes in a matrix:
+
+$$\bf{G} =\begin{pmatrix} 1 & G_{1} \\ 1 & G_{2} \\ \vdots & \vdots \\ 1 & G_{N} \end{pmatrix}$$
+
+It follows that: 
+
+$$\bf{G}^T\bf{G} = \begin{pmatrix} N & \sum_{j=1}^{N} G_j \\ \sum_{j=1}^{N} G_j & \sum_{j=1}^{N} G_j^2  \end{pmatrix}$$
+
+Now let $m < 0.5$ denote the allele frequency for the variant allele over the population. We assume that the SNP is in Hardy Weinburg Equilibrium. Due to independent sampling, each $G_j$ is binomially distributed, with mean $E(G_j) = 2m$ and second moment,
+$E(G_j^2) = (E(G_j))^2 + \text{var}(G_j) = 4m^2 + 2m(1-m)$.
+
+By the law of large numbers, this gives:
+
+$$\bf{G}^T\bf{G} \sim \begin{pmatrix} N & N \cdot E(G_j)\\ N \cdot E(G_j) & N \cdot E(G_j^2)  \end{pmatrix} = \begin{pmatrix} N & N \cdot 2m \\ N \cdot 2m & N \cdot (4m^2 + 2m(1-m))  \end{pmatrix}$$
+
+where **A** $\sim$ **B** implies as $N \rightarrow \inf, \frac{A_{ij}}{B_{ij}} \rightarrow 1$, for each element $(i,j)$ of the matrices **A** and **B**, where dependence of $A$ and $B$ on $N$ is suppressed for simplicity. 
+From this, it follows that: 
+
+$$\left(\bf{G}^T\bf{G} \right)^{-1} \sim \frac{1}{N} \begin{pmatrix} 1 & 2m \\ 2m & 4m^2 + 2m(1-m) \end{pmatrix}^{-1}$$
+
+where
+
+$$\textbf{C} = \begin{pmatrix} 1 & 2m \\ 2m & 4m^2 + 2m(1-m) \end{pmatrix}^{-1} = \frac{1}{2m(1-m)} \begin{pmatrix} 2m(1-m) + 4m^2 & 2m \\ 2m & 1 \end{pmatrix}.$$
+
+Now, suppose we genotype individuals $i = 1,...,N_1,....,N_1+N_2,....,N_1+N_2+N_3$. The exposure, $X$ and the outcome, $Y$ are recorded for individuals $i = 1,...,N_1,$, $X$ but not $Y$ is recorded for $i = N_1 + 1,....,N_1+N_2,$ and $Y$ but not $X$ is recorded for individuals $i = N_1+N_2 + 1,....,N_1+N_2+N_3$. We partition the genotype matrices corresponding to the individuals with measured $X$ and measured $Y$ as follows:
+
+$$ \bf{G_X} = \begin{pmatrix} \bf{G_1} \\ \bf{G_2} \end{pmatrix}$$
+$$ \bf{G_Y} = \begin{pmatrix} \bf{G_1} \\ \bf{G_3} \end{pmatrix}$$
+
+where $\bf{G_1}$ is an $N_1 \times 2$ matrix (its first column being 1 and the 2nd column the genotypes), $\bf{G_2}$ is $N_2 \times 2$ and $\bf{G_3}$ is $N_3 \times 2$.
+
+Basedon these genotypes matrices, and denoting the $(N_1 + N_2) \times 1$ exposure vector by $\bf{X}$ and the $(N_1 + N_3) \times 1$ outcome vector by $\bf{Y}$, the estimated regression coefficient vectors corresponding to the SNP-exposure and the SNP-outcome regressions are:
+
+$$\hat \beta_X = \left( \textbf{G}_\textbf{X}^T\textbf{G}_\textbf{X} \right)^{-1}\textbf{G}_\textbf{X}^T\textbf{X} \sim \frac{\textbf{C}}{N_1 + N_2} \textbf{G}_\textbf{X}^T\textbf{X}$$
+
+and 
+
+$$\hat \beta_Y = \left( \textbf{G}_\textbf{Y}^T\textbf{G}_\textbf{Y} \right)^{-1}\textbf{G}_\textbf{Y}^T\textbf{Y} \sim \frac{\textbf{C}}{N_1 + N_3} \textbf{G}_\textbf{Y}^T\textbf{Y}$$
+
+It follows that 
+
+$$\text{cov}(\hat \beta_X, \hat \beta_Y) = \text{cov}\left( \frac{\textbf{C}}{N_1 + N_2} \textbf{G}_\textbf{X}^T\textbf{X}, \frac{\textbf{C}}{N_1 + N_3} \textbf{G}_\textbf{Y}^T\textbf{Y} \right) = \frac{\textbf{C}\textbf{G}_\textbf{1}^T \text{cov}(\textbf{X}_\textbf{1}, \textbf{Y}_\textbf{1}) \textbf{G}_\textbf{1}\textbf{C}^T}{(N_1 + N_2)(N_1 + N_3)}$$
+
+where $\bf{X_1}$ and $\bf{Y_1}$ denote the first $N_1$ elements of $X$ and $Y$. 
+
+Finally, noting that $\text{cov}(\textbf{X}_\textbf{1}, \textbf{Y}_\textbf{1}) = \text{cov}(X,Y)\textbf{I}_{N_1}$, where from before $\text{cov}(X,Y) = \beta \text{var}(X) + \delta_{u,x}\delta_{u,y}\cdot\text{var}(U)$ and $\textbf{I}_{N_1}$ is the $N_1 \times N_1$ identity matrix, $\textbf{G}_\textbf{1}^T\textbf{G}_\textbf{1} \sim N_1 \textbf{C}^{-1}$ and $\bf{C} = \bf{C}^T$, it follows that:
+
+$$\text{cov}(\hat \beta_X, \hat \beta_Y) \sim \frac{N_1 \text{cov}(X,Y) \textbf{C}}{(N_1 + N_2)(N_1 + N_3)}$$
+
+The preceding matrix equation details the covariance of the coefficient vectors: $\hat\beta_X$ and $\hat\beta_Y$. However, we are in fact just interested in the second component of these vectors, i.e. the slope coefficients $\hat\beta_{X1}$ and $\hat\beta_{Y1}$ rather than the intercepts. Therefore, in order to obtain an expression for $\text{cov}(\hat\beta_{X1},\hat\beta_{Y1})$, it is required to extract the lower right element of the preceding matrix. The corresponding element of $\textbf{C}$ is $\frac{1}{2m(1-m)}$. Denoting $\rho$ as the correlation between the exposure and the outcome, $\text{cov}(X,Y)= \rho \sqrt{\text{var}(X)} \sqrt{\text{var}(Y)}$. The expression for the covariance between the slope coefficients pertaining to $X$ and $Y$ is then:
+
+$$\text{cov}(\hat \beta_{X1}, \hat \beta_{Y1}) \sim \frac{N_1 \rho \sqrt{\text{var}(X)} \sqrt{\text{var}(Y)}}{2m(1-m)(N_1 + N_2)(N_1 + N_3)}$$
+
+Standard statistical theory dictates that $\text{var}(\hat\beta_{X1}) \sim \frac{\text{var}(X)}{(N_1 + N_2)2m(1-m)}$ and $\text{var}(\hat\beta_{Y1}) \sim \frac{\text{var}(Y)}{(N_1 + N_3)2m(1-m)}$, indicating that the variance-covariance matrix of $(\hat \beta_{X1}, \hat \beta_{Y1})$ is:
+
+$$\textbf{var}(\hat\beta_{X1}, \hat\beta_{Y1}) =  \begin{pmatrix} \text{var}(\hat\beta_{X1}) & \text{cov}(\hat\beta_{X1},\hat\beta_{Y1}) \\ \text{cov}(\hat\beta_{X1},\hat\beta_{Y1}) & \text{var}(\hat\beta_{Y1}) \end{pmatrix}  \sim \frac{1}{2m(1-m)} \begin{pmatrix} \frac{\text{var}(X)}{(N_1 + N_2)} & \frac{N_1 \rho \sqrt{\text{var}(X)} \sqrt{\text{var}(Y)}}{(N_1 + N_2)(N_1 + N_3)} \\ \frac{N_1 \rho \sqrt{\text{var}(X)} \sqrt{\text{var}(Y)}}{(N_1 + N_2)(N_1 + N_3)} & \frac{\text{var}(Y)}{(N_1 + N_3)} \end{pmatrix}   .$$
+
+<br>
+
+
+From the above derivation, it is easy to see how **Step 3** may be executed. Simply, for a given SNP, SNP $i$, when values for $\beta_{X1}$ and $\beta_{Y1}$ are available, values for $\hat\beta_{X1}$ and $\hat\beta_{Y1}$ can be simulated from the following distribution:
+
+$$\begin{pmatrix} \hat\beta_{X1} \\ \hat\beta_{Y1} \end{pmatrix} \sim N \left( \begin{pmatrix} \beta_{X1} \\ \beta_{Y1} \end{pmatrix},
+\frac{1}{2\text{maf}_i(1-\text{maf}_i)} \begin{pmatrix} \frac{1}{N_X} & \frac{N_\text{overlap} \rho }{N_X N_Y} \\ \frac{N_\text{overlap} \rho}{N_X N_Y} & \frac{1}{N_Y} \end{pmatrix}  \right) $$
+
+where we assume $\text{maf}_i$ is the minor allele frequency of SNP $i$, $N_X$ is the number of individuals with exposure information, $N_Y$ is the number of individuals with recorded outcomes, $N_\text{overlap}$ is the number of individuals who have both exposure and outcome information available and $\rho$ is the correlation between the exposure, $X$ and the outcome, $Y$. Note that we also assume that the variance of both the exposure and outcome are equal to 1, i.e. $\text{var}(X) = \text{var}(Y) = 1$. 
+
+
+<br>
+
+[$\star$]{style="color: blue;"} **Note:** Even though our data-generating model outlined above assumes that confounding exists which is captured by $\rho_{XY}$ taking a *different* value to $\beta_{XY}$, it also assumes that there are **no direct genetic effects on the outcome**. This is clearly seen in Step 2 as $\beta_{Y1} = \beta_{XY} \cdot\beta_{X1}$. Naturally, we are aware that this is a limitation of our simulation study as it is likely with real data that direct genetic effects on the outcome will exist. However, we note that in the simulation study executed in [*"Bias correction for inverse variance weighting Mendelian randomization"*](https://onlinelibrary.wiley.com/doi/epdf/10.1002/gepi.22522), a similar approach was taken as they mention that "For simplicity, we assumed that there were no direct genetic effects on the outcome". 
+
+[**Question:**]{style="color: purple;"} *Is it possible to introduce balanced and/or unbalanced direct genetic effects on the outcome into our model? Is it advised to do so in order to reduce limitations of our study or is it acceptable to omit it as this is something our method does not consider, i.e. the purpose of our study is to show how our method deals with Winner's Curse, weak instrument bias and sample overlap?* 
+
+
+<br>
+
+#### Choice of parameters
+
+The discussion of the data-generating model above provided an indication as to what parameters need to be specified for our simulation study. In the function `sim_mr_stats`, we can see that there are 8 arguments required. Firstly, we will choose to fix the number of independent SNPs at 1,000,000, `n_snps = 10^6` and also, we will fix the **causal effect** of the exposure on the outcome at 0.3, `beta_xy =0.3`. 
+
+Both the **heritability**, `h2` and the **proportion of effect SNPs**, `prop_effect` essentially work together in determining the genetic architecture of the exposure. This is important to explore in terms of our study here as according to [*"Review and further developments in statistical corrections for Winner’s Curse in genetic association studies"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546), "The extent of *Winner’s Curse* bias will partially depend on the true effect size distribution. This true effect size distribution is dependent on a combination of factors such as polygenicity, heritability and allele frequency distribution, with all of these features relating to power...". Furthermore, this paper also mentions that "...the presence of *Winner’s Curse* bias in the estimated effect sizes of significant SNPs should be of a greater concern when investigating traits with lower heritability or traits which have a larger proportion of effect SNPs." Similar to the simulation study detailed in this paper, we will include two values for heritability, `h2 = {0.3,0.7}` and polygenicity, `prop_effect = {0.01,0.001}` in our factorial design. Therefore, given the above, we anticipate that *Winner's Curse* bias will be greatest in the SNP-exposure effect size estimates and the number of significant SNPs or instruments will be lowest in the scenario in which `h2 = 0.3` and `prop_effect = 0.01`. 
+
+With respect to weak instrument bias, it is stated in [*"Review and further developments in statistical corrections for Winner’s Curse in genetic association studies"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546), that "In the case that the exposure and outcome effects are estimated in a single (i.e.
+fully overlapping) sample, the bias will be in the direction of the (confounded) observational
+association. When SNP-exposure and SNP-outcome estimates are obtained from two nonoverlapping samples, the bias is in the direction of the null. Partial sample overlap will lead
+to an estimate that lies between these two extremes." Therefore, varying both the the **correlation** between the exposure and the outcome, `cor_xy` as well as the **fraction of overlap** between the two samples, `frac_overlap`, will allow us to witness this behaviour. We choose to include the following values for the correlation, `cor_xy = {-0.1,0.1,0.3,0.5}` and the fraction of overlap, `frac_overlap = {0,0.25,0.5,0.75,1}`. For example, when `cor_xy = 0.5` and `frac_overlap = 0`, in methods which do not take into account weak instrument bias, we expect that our causal effect estimates will be underestimated and suffer from bias toward the null. When we increase the fraction of overlap to `frac_overlap = 1` for this value of correlation, we then expect to see that our estimates will be upward biased towards 0.5 for these methods. 
+
+Finally, as we have already included several different choices of parameters which will result in a total of $2 \times 2 \times 2 \times 4 \times 5 = 80$ different scenarios, we will just choose one reasonable value for the **sample size** of the exposure and outcome GWASs. We assume that both GWASs are of the same sample size and we first set `n_x = n_y = 200000`. This is arguably somewhat reflective of the sample size of typical GWASs as most GWASs are performed using hundreds of thousands of individuals. However, as the extent of *Winner's Curse* bias is known to be dependent on sample size, we hope to extend our simulation study to sample sizes of 50,000 and 500,000, `n_x = n_y = {50000,500000}`, in order to see how changes in sample size can affect our causal effect estimate. 
+
+<br>
+
+### Code 
+
+The code for our simulation study is included below. These simulations were run on the HPC cluster at University of Galway. 
+
+```{r, eval=FALSE}
+library(parallel)
+library(winnerscurse)
+library(TwoSampleMR)
+library(mr.simss)
+library(mr.raps)
+library(mr.divw)
+
+
+## Required Functions sim_mr_stats (as defined with matrix multiplication above), mr_ivw_EB:
+source("MRSimSS_sims_funs.R")
+
+
+## Total number of simulations:
+tot_sim <- 100
+n_snps <- 10^6
+beta_xy <- 0.3
+
+sim_params <- expand.grid(
+   sim = c(1:tot_sim),
+   h2 = c(0.3,0.7),
+   prop_effect = c(0.01,0.001),
+   cor_xy = c(-0.1,0.1,0.3,0.5),
+   frac_overlap = c(0, 0.25, 0.5, 0.75, 1),
+   n_x = c(200000)
+)
+
+
+set.seed(1998)
+
+
+run_sim <- function(h2,prop_effect,cor_xy,frac_overlap,n_x,sim){
+
+  data <- sim_mr_stats(n_snps, prop_effect, h2, frac_overlap, n_x, n_x, cor_xy, beta_xy)
+
+  ## MRSimSS-2-IVW
+  res.sim.2.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,n.exposure=n_x,n.outcome=n_x,n.overlap=frac_overlap*n_x,cor.xy=cor_xy,n.iter=1000,splits=2,mr_method = "mr_ivw",parallel=TRUE)$summary
+
+  ## MRSimSS-2-RAPS
+  res.sim.2.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,n.exposure=n_x,n.outcome=n_x,n.overlap=frac_overlap*n_x,cor.xy=cor_xy,n.iter=1000,splits=2,mr_method = "mr_raps",parallel=TRUE)$summary
+
+  ## MRSimSS-3-IVW
+  res.sim.3.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,n.exposure=n_x,n.outcome=n_x,n.overlap=frac_overlap*n_x,cor.xy=cor_xy,n.iter=1000,splits=3,mr_method = "mr_ivw",parallel=TRUE)$summary
+
+  ## MRSimSS-3-RAPS
+  res.sim.3.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,n.exposure=n_x,n.outcome=n_x,n.overlap=frac_overlap*n_x,cor.xy=cor_xy,n.iter=1000,splits=3,mr_method = "mr_raps",parallel=TRUE)$summary
+  
+  ## IVW
+  data_mr <- tibble::tibble(
+    SNP = data$SNP,
+    id.exposure="X",
+    id.outcome="Y",
+    exposure="X",
+    outcome="Y",
+    beta.exposure = data$beta.exposure,
+    beta.outcome = data$beta.outcome,
+    se.exposure = data$se.exposure,
+    se.outcome = data$se.outcome,
+    mr_keep=TRUE
+  )
+
+  data_mr_sig <- data_mr %>% dplyr::filter(2*(stats::pnorm(abs(data_mr$beta.exposure/data_mr$se.exposure), lower.tail=FALSE)) < 5e-8)
+  res.ivw <- TwoSampleMR::mr(data_mr_sig,method_list=c("mr_ivw"))[,5:9]
+
+  ## MR-RAPS
+  data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < 5e-8)
+  res.raps <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+  res.raps <- data.frame(method="mr_raps", nsnp=nrow(data_sig), b=res.raps$beta.hat, se=res.raps$beta.se, pval=res.raps$beta.p.value)
+
+  ## IVW-EB
+  res.ivw.EB <- mr_ivw_EB(data)
+
+  ## dIVW
+  res.divw <- mr.divw::mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+  res.divw <- data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE)))
+
+  ## compile results
+  results <- list(params = data.frame(sim=sim,h2=h2,prop_effect=prop_effect,cor_xy=cor_xy,frac_overlap=frac_overlap,n_x=n_x), res.sim.2.ivw, res.sim.2.raps, res.sim.3.ivw, res.sim.3.raps, res.ivw, res.raps, res.ivw.EB, res.divw)
+  return(results)
+}
+
+res <- mclapply(1:nrow(sim_params), function(i){do.call(run_sim, args=as.list(sim_params[i,]))}, mc.cores=1) 
+
+## Organise results:
+total_res <- data.frame(sim=c(),h2=c(),prop_effect=c(),cor_xy=c(),frac_overlap=c(),n_x=c(),method=c(),nsnp=c(),b=c(),se=c(),pval=c())
+
+for(i in 1:length(res)){
+  for(j in 2:length(res[[1]])){
+    res1 <- cbind(data.frame(res[[i]][1]$params),res[[i]][j][[1]])
+    if(j == 2 | j == 3 | j == 4 | j == 5){res1$method <- paste("MRSimSS", res1$method, sep = "-")
+    res1 <- res1[,c(1:8,10:12)]}
+    total_res <- rbind(total_res,res1)
+  }
+}
+
+## export total_res to csv file 
+write.table(total_res,args[1],quote=FALSE,row.names=FALSE)
+
+```
+
+<br>
+
+## Simulation study results 
+
+After performing the detailed simulation study, we now aim to visualise and appropriately interpret the results. 
+
+As we have considered a factorial design with 80 different scenarios, it is difficult to visualise all in one plot. Thus, we will first consider plotting our results collapsed over `h2`, heritability and `prop_effect`, proportion of effect SNPs, as shown below. 
+
+[**Comments:**]{style="color: purple;"}
+
+- `divw` seems to be only suitable in the case of zero overlap and thus, there seems to be a real danger in using `divw` to obtain an estimate of the causal effect if any degree of overlap is present between the two samples. However, even if it does appear to perhaps have greater standard deviation than the other approaches when there is zero overlap, it also appears that it is unbiased.
+
+- In terms of **consistently being unbiased** in all scenarios, it is evident that there is one clear winner - **`SimSS3_raps`**. Most encouragingly, in the case where there is full overlap and `cor_xy=0.5`, this method still seems to generate unbiased causal effect estimates while all other methods, except `SimSS3_ivw`, are biased upwards towards the observational association. 
+
+- `ivw_EB` is essentially the IVW method which uses SNP-exposure effect estimates which have been corrected for *Winner's Curse* bias using the empirical Bayes approach. It seems to be performing very well when there is zero overlap. However, as this fraction of overlap increases, especially when `cor_xy = {0.3,0.5}`, the causal effect estimates obtained with this method seem to suffer from much greater standard deviation and become clearly upward biased when there is full overlap. 
+
+- We note that even though `SimSS2_ivw` and `SimSS3_ivw` have removed *Winner's Curse* bias, it is clear to see that weak instrument bias is still very much present. This is especially clear to see in `SimSS3_ivw` as it simulates splitting the original sample in 3 and therefore, we see that no matter what fraction of overlap may exist, this method demonstrates greater weak instrument bias toward the null in all cases. In the 2-split approach of our method, the weak instrument bias will be toward the observational association or correlation. 
+
+- Lastly both `ivw` and `raps` have *Winner's Curse* bias present, with `ivw` also suffering from weak instrument bias. We note that MR-RAPS is a method known to alleviate weak instrument bias. When there is no overlap, both of these approaches have greater variance and are biased towards the null. When there is full overlap, their performance varies depending on the correlation between the exposure and outcome. 
+
+ 
+
+
+
+<p align="center">
+<a href="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_all.png?raw=true"> 
+<img src="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_all.png?raw=true" width="100%"> </a>
+</p>
+
+
+```{r,echo=FALSE}
+results <- read.table("C:/Users/GenDataSci025/Downloads/MRSimSS_res_test.txt",header=TRUE)
+
+results$method_name <- rep(c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","divw"),length(results)/8)
+results$method_name <- factor(results$method_name, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","divw"))
+results$methodA <- rep(c("A","B","C","D","E","F","G","H"),length(results)/8)
+
+results$mse <- (results$b - 0.3)^2
+results <- results[is.na(results$se) == FALSE,]
+
+ave.b <- c(mean(results$b[results$methodA=="A"]),mean(results$b[results$methodA=="B"]),mean(results$b[results$methodA=="C"]),mean(results$b[results$methodA=="D"]),mean(results$b[results$methodA=="E"]),mean(results$b[results$methodA=="F"]),mean(results$b[results$methodA=="G"]),mean(results$b[results$methodA=="H"]))
+rmse <- c(sqrt(mean(results$mse[results$methodA=="A"])),sqrt(mean(results$mse[results$methodA=="B"])),sqrt(mean(results$mse[results$methodA=="C"])),sqrt(mean(results$mse[results$methodA=="D"])),sqrt(mean(results$mse[results$methodA=="E"])),sqrt(mean(results$mse[results$methodA=="F"])),sqrt(mean(results$mse[results$methodA=="G"])),sqrt(mean(results$mse[results$methodA=="H"])))
+ave.se <- c(mean(results$se[results$methodA=="A"]),mean(results$se[results$methodA=="B"]),mean(results$se[results$methodA=="C"]),mean(results$se[results$methodA=="D"]),mean(results$se[results$methodA=="E"]),mean(results$se[results$methodA=="F"]),mean(results$se[results$methodA=="G"]),mean(results$se[results$methodA=="H"]))
+n.IV <- c(mean(results$nsnp[results$methodA=="A"]),mean(results$nsnp[results$methodA=="B"]),mean(results$nsnp[results$methodA=="C"]),mean(results$nsnp[results$methodA=="D"]),mean(results$nsnp[results$methodA=="E"]),mean(results$nsnp[results$methodA=="F"]),mean(results$nsnp[results$methodA=="G"]),mean(results$nsnp[results$methodA=="H"]))
+
+ave.sd <- function(x){sqrt((sum((results$b[results$methodA==x]-mean(results$b[results$methodA==x]))^2))/sum(results$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+
+CP <- function(x){(sum((0.3 < (results$b[results$methodA==x] + 1.96*results$se[results$methodA==x])) & (0.3 >(results$b[results$methodA==x] - 1.96*results$se[results$methodA==x]))))/sum(results$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+
+results_summary <- data.frame(method = c(results$method[1:8]), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+results_summary
+```
+
+
+<br>
+
+We will now break down our results further and look at obtaining similar boxplots but for each fraction of overlap, with the results for different values of heritability and polygenicity visible. 
+
+
+[**Zero overlap:**]{style="color: purple;"}
+
+```{r,include=FALSE,eval=FALSE}
+library(patchwork)
+library(ggpubr)
+library("RColorBrewer")
+col <- brewer.pal(8,"Dark2")
+col1 <- brewer.pal(11,"RdYlBu")
+col2 <- brewer.pal(11,"PRGn")
+results0 <- results[results$frac_overlap==0,]
+
+results0A <- results0[results0$cor_xy==-0.1,]
+results0B <- results0[results0$cor_xy==0.1,]
+results0C <- results0[results0$cor_xy==0.3,]
+results0D <- results0[results0$cor_xy==0.5,]
+
+plotA <- ggplot(results0A, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = -0.1')
+
+
+plotB <- ggplot(results0B, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.1')
+
+
+plotC <- ggplot(results0C, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.3')
+
+
+plotD <- ggplot(results0D, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.5')
+
+figure <- plotA + plotB + plotC + plotD
+figure + plot_layout(guides = "collect") + plot_annotation(tag_levels = 'A') &
+  theme(plot.tag = element_text(face = "bold"))
+
+
+## save as image and include 
+```
+
+
+<p align="center">
+<a href="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_0_overlap.png?raw=true"> 
+<img src="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_0_overlap.png?raw=true" width="80%"> </a>
+</p>
+
+
+```{r,echo=FALSE}
+results0 <- results[results$frac_overlap==0,]
+results0$mse <- (results0$b - 0.3)^2
+
+ave.b <- c(mean(results0$b[results0$methodA=="A"]),mean(results0$b[results0$methodA=="B"]),mean(results0$b[results0$methodA=="C"]),mean(results0$b[results0$methodA=="D"]),mean(results0$b[results0$methodA=="E"]),mean(results0$b[results0$methodA=="F"]),mean(results0$b[results0$methodA=="G"]),mean(results0$b[results0$methodA=="H"]))
+rmse <- c(sqrt(mean(results0$mse[results0$methodA=="A"])),sqrt(mean(results0$mse[results0$methodA=="B"])),sqrt(mean(results0$mse[results0$methodA=="C"])),sqrt(mean(results0$mse[results0$methodA=="D"])),sqrt(mean(results0$mse[results0$methodA=="E"])),sqrt(mean(results0$mse[results0$methodA=="F"])),sqrt(mean(results0$mse[results0$methodA=="G"])),sqrt(mean(results0$mse[results0$methodA=="H"])))
+ave.se <- c(mean(results0$se[results0$methodA=="A"]),mean(results0$se[results0$methodA=="B"]),mean(results0$se[results0$methodA=="C"]),mean(results0$se[results0$methodA=="D"]),mean(results0$se[results0$methodA=="E"]),mean(results0$se[results0$methodA=="F"]),mean(results0$se[results0$methodA=="G"]),mean(results0$se[results0$methodA=="H"]))
+n.IV <- c(mean(results0$nsnp[results0$methodA=="A"]),mean(results0$nsnp[results0$methodA=="B"]),mean(results0$nsnp[results0$methodA=="C"]),mean(results0$nsnp[results0$methodA=="D"]),mean(results0$nsnp[results0$methodA=="E"]),mean(results0$nsnp[results0$methodA=="F"]),mean(results0$nsnp[results0$methodA=="G"]),mean(results0$nsnp[results0$methodA=="H"]))
+
+ave.sd <- function(x){sqrt((sum((results0$b[results0$methodA==x]-mean(results0$b[results0$methodA==x]))^2))/sum(results0$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+
+CP <- function(x){(sum((0.3 < (results0$b[results0$methodA==x] + 1.96*results0$se[results0$methodA==x])) & (0.3 >(results0$b[results0$methodA==x] - 1.96*results0$se[results0$methodA==x]))))/sum(results0$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+
+results0_summary <- data.frame(method = c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","divw"), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+results0_summary
+```
+
+
+[$\star$]{style="color: blue;"} **Comments:**
+
+- In terms of bias, RMSE, standard deviation and coverage probability, **`SimSS2_raps` and `SimSS3_raps` perform very well** here across all combinations of heritability, polygenicity and correlation. Both approaches **reduce RMSE by about 57%** when compared with the original `raps` method. Given our description of our approach above, in the case of zero overlap, there is no real need to implement the 3-split form of our method as it brings no extra benefit. However, we see here by comparing `SimSS2_raps` with `SimSS3_raps` that the results given by both methods are very similar. `SimSS2_raps` demonstrates only very small improvements in terms of RMSE and coverage probability when compared with `SimSS3_raps`. Therefore, this perhaps provides evidence that we should recommend the researcher to only use `SimSS2_raps` if they know for certain that there is zero overlap between their exposure and outcome samples, but if there potentially could be overlap between the two samples, then `SimSS3_raps` should be used. 
+
+- Interestingly, **`ivw_EB` has the smallest value for RMSE** and standard deviation here, with a reasonably unbiased average causal effect. Its average standard error is also closer to that of `ivw` and `raps`, which is somewhat lower than the competing simulated sample splitting methods.
+
+- `divw` behaves well producing a competitive average causal estimate as well as good coverage probability. Notably, its average standard error is quite high compared to the other methods, which most likely has played a part in its values for RMSE and standard deviation. However, as we witnessed above, this is the only fraction of overlap in which `divw` performs competitively, and therefore, it is advised that the researcher demonstrates caution if using the `divw` method with two GWASs that may have overlapping samples. 
+
+- Note that the **coverage probabilities for `ivw` and `raps` are both less than 50%**, which clearly provides evidence that some form of bias exists in their causal effect estimates.
+
+<br>
+
+[**25% overlap:**]{style="color: purple;"}
+
+```{r, include=FALSE,eval=FALSE}
+results.25 <- results[results$frac_overlap==0.25,]
+
+results.25B <- results.25[results.25$cor_xy==-0.1,]
+results.25B <- results.25[results.25$cor_xy==0.1,]
+results.25C <- results.25[results.25$cor_xy==0.3,]
+results.25D <- results.25[results.25$cor_xy==0.5,]
+
+plotA <- ggplot(results.25A, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = -0.1')
+
+
+plotB <- ggplot(results.25B, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.1')
+
+
+plotC <- ggplot(results.25C, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.3')
+
+
+plotD <- ggplot(results.25D, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.5')
+
+figure <- plotA + plotB + plotC + plotD
+figure + plot_layout(guides = "collect") + plot_annotation(tag_levels = 'A') &
+  theme(plot.tag = element_text(face = "bold"))
+
+
+## save as image and include 
+```
+
+
+<p align="center">
+<a href="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_25_overlap.png?raw=true"> 
+<img src="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_25_overlap.png?raw=true" width="80%"> </a>
+</p>
+
+
+```{r,echo=FALSE}
+results.25 <- results[results$frac_overlap==0.25,]
+results.25$mse <- (results.25$b - 0.3)^2
+
+ave.b <- c(mean(results.25$b[results.25$methodA=="A"]),mean(results.25$b[results.25$methodA=="B"]),mean(results.25$b[results.25$methodA=="C"]),mean(results.25$b[results.25$methodA=="D"]),mean(results.25$b[results.25$methodA=="E"]),mean(results.25$b[results.25$methodA=="F"]),mean(results.25$b[results.25$methodA=="G"]),mean(results.25$b[results.25$methodA=="H"]))
+rmse <- c(sqrt(mean(results.25$mse[results.25$methodA=="A"])),sqrt(mean(results.25$mse[results.25$methodA=="B"])),sqrt(mean(results.25$mse[results.25$methodA=="C"])),sqrt(mean(results.25$mse[results.25$methodA=="D"])),sqrt(mean(results.25$mse[results.25$methodA=="E"])),sqrt(mean(results.25$mse[results.25$methodA=="F"])),sqrt(mean(results.25$mse[results.25$methodA=="G"])),sqrt(mean(results.25$mse[results.25$methodA=="H"])))
+ave.se <- c(mean(results.25$se[results.25$methodA=="A"]),mean(results.25$se[results.25$methodA=="B"]),mean(results.25$se[results.25$methodA=="C"]),mean(results.25$se[results.25$methodA=="D"]),mean(results.25$se[results.25$methodA=="E"]),mean(results.25$se[results.25$methodA=="F"]),mean(results.25$se[results.25$methodA=="G"]),mean(results.25$se[results.25$methodA=="H"]))
+n.IV <- c(mean(results.25$nsnp[results.25$methodA=="A"]),mean(results.25$nsnp[results.25$methodA=="B"]),mean(results.25$nsnp[results.25$methodA=="C"]),mean(results.25$nsnp[results.25$methodA=="D"]),mean(results.25$nsnp[results.25$methodA=="E"]),mean(results.25$nsnp[results.25$methodA=="F"]),mean(results.25$nsnp[results.25$methodA=="G"]),mean(results.25$nsnp[results.25$methodA=="H"]))
+
+ave.sd <- function(x){sqrt((sum((results.25$b[results.25$methodA==x]-mean(results.25$b[results.25$methodA==x]))^2))/sum(results.25$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+
+CP <- function(x){(sum((0.3 < (results.25$b[results.25$methodA==x] + 1.96*results.25$se[results.25$methodA==x])) & (0.3 >(results.25$b[results.25$methodA==x] - 1.96*results.25$se[results.25$methodA==x]))))/sum(results.25$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+
+results.25_summary <- data.frame(method = c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","divw"), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+results.25_summary
+```
+
+[$\star$]{style="color: blue;"} **Comments:**
+
+- With a fraction of overlap of 25%, `divw` has already begun to severely break down, while `ivw` and `raps` still suffer from general downward bias and higher RMSE. 
+
+- `SimSS2_raps`, `SimSS3_raps` and `ivw_EB` continue to be the best performing methods with average causal effect estimates extremely close to 0.3, low RMSE values and high coverage probabilities. However, note that in terms of coverage probability, the value for `ivw_EB` is notably lower compared to the other two. 
+
+- `SimSS3_ivw` is behaving as expected, demonstrating bias towards the null. Even though the sample splitting process removes *Winner's Curse*, using the approach in combination with the IVW method shows an increase in weak instrument bias, in comparison with the regular IVW method, as both the SNP-exposure and SNP-outcome estimates used to determine the causal effect estimate at each iteration have greater variance. No matter what fraction of overlap may exist, in the 3 split approach with IVW, this weak instrument bias will always be towards the null as the SNP-exposure and SNP-outcome estimates are derived from non-overlapping simulated splits. 
+
+
+<br>
+
+[**50% overlap:**]{style="color: purple;"}
+
+```{r, include=FALSE,eval=FALSE}
+results.5 <- results[results$frac_overlap==0.5,]
+
+results.5A <- results.5[results.5$cor_xy==-0.1,]
+results.5B <- results.5[results.5$cor_xy==0.1,]
+results.5C <- results.5[results.5$cor_xy==0.3,]
+results.5D <- results.5[results.5$cor_xy==0.5,]
+
+plotA <- ggplot(results.5A, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = -0.1')
+
+
+plotB <- ggplot(results.5B, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.1')
+
+
+plotC <- ggplot(results.5C, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.3')
+
+
+plotD <- ggplot(results.5D, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.5')
+
+figure <- plotA + plotB + plotC + plotD
+figure + plot_layout(guides = "collect") + plot_annotation(tag_levels = 'A') &
+  theme(plot.tag = element_text(face = "bold"))
+
+
+## save as image and include 
+```
+
+<p align="center">
+<a href="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_50_overlap.png?raw=true"> 
+<img src="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_50_overlap.png?raw=true" width="80%"> </a>
+</p>
+
+
+```{r,echo=FALSE}
+results.5 <- results[results$frac_overlap==0.5,]
+results.5$mse <- (results.5$b - 0.3)^2
+
+ave.b <- c(mean(results.5$b[results.5$methodA=="A"]),mean(results.5$b[results.5$methodA=="B"]),mean(results.5$b[results.5$methodA=="C"]),mean(results.5$b[results.5$methodA=="D"]),mean(results.5$b[results.5$methodA=="E"]),mean(results.5$b[results.5$methodA=="F"]),mean(results.5$b[results.5$methodA=="G"]),mean(results.5$b[results.5$methodA=="H"]))
+rmse <- c(sqrt(mean(results.5$mse[results.5$methodA=="A"])),sqrt(mean(results.5$mse[results.5$methodA=="B"])),sqrt(mean(results.5$mse[results.5$methodA=="C"])),sqrt(mean(results.5$mse[results.5$methodA=="D"])),sqrt(mean(results.5$mse[results.5$methodA=="E"])),sqrt(mean(results.5$mse[results.5$methodA=="F"])),sqrt(mean(results.5$mse[results.5$methodA=="G"])),sqrt(mean(results.5$mse[results.5$methodA=="H"])))
+ave.se <- c(mean(results.5$se[results.5$methodA=="A"]),mean(results.5$se[results.5$methodA=="B"]),mean(results.5$se[results.5$methodA=="C"]),mean(results.5$se[results.5$methodA=="D"]),mean(results.5$se[results.5$methodA=="E"]),mean(results.5$se[results.5$methodA=="F"]),mean(results.5$se[results.5$methodA=="G"]),mean(results.5$se[results.5$methodA=="H"]))
+n.IV <- c(mean(results.5$nsnp[results.5$methodA=="A"]),mean(results.5$nsnp[results.5$methodA=="B"]),mean(results.5$nsnp[results.5$methodA=="C"]),mean(results.5$nsnp[results.5$methodA=="D"]),mean(results.5$nsnp[results.5$methodA=="E"]),mean(results.5$nsnp[results.5$methodA=="F"]),mean(results.5$nsnp[results.5$methodA=="G"]),mean(results.5$nsnp[results.5$methodA=="H"]))
+
+ave.sd <- function(x){sqrt((sum((results.5$b[results.5$methodA==x]-mean(results.5$b[results.5$methodA==x]))^2))/sum(results.5$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+
+CP <- function(x){(sum((0.3 < (results.5$b[results.5$methodA==x] + 1.96*results.5$se[results.5$methodA==x])) & (0.3 >(results.5$b[results.5$methodA==x] - 1.96*results.5$se[results.5$methodA==x]))))/sum(results.5$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+
+results.5_summary <- data.frame(method = c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","divw"), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+results.5_summary
+```
+
+[$\star$]{style="color: blue;"} **Comments:**
+
+- In terms of all our evaluation metrics, both `SimSS2_raps` and `SimSS3_raps` are undoubtedly the most consistent methods, with coverage probabilities near 95%. `ivw_EB` is becoming less competitive with a reduced coverage probability and increased RMSE. In the plots, it can be seen that `ivw_EB` shows great upward bias when the proportion of effect SNPs is 0.01. 
+
+<br>
+
+[**75% overlap:**]{style="color: purple;"}
+
+```{r, include=FALSE,eval=FALSE}
+results.75 <- results[results$frac_overlap==0.75,]
+
+results.75A <- results.75[results.75$cor_xy==-0.1,]
+results.75B <- results.75[results.75$cor_xy==0.1,]
+results.75C <- results.75[results.75$cor_xy==0.3,]
+results.75D <- results.75[results.75$cor_xy==0.5,]
+
+plotA <- ggplot(results.75A, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = -0.1')
+
+
+plotB <- ggplot(results.75B, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.1')
+
+
+plotC <- ggplot(results.75C, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.3')
+
+
+plotD <- ggplot(results.75D, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.5')
+
+figure <- plotA + plotB + plotC + plotD
+figure + plot_layout(guides = "collect") + plot_annotation(tag_levels = 'A') &
+  theme(plot.tag = element_text(face = "bold"))
+
+
+## save as image and include 
+```
+
+<p align="center">
+<a href="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_75_overlap.png?raw=true"> 
+<img src="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_75_overlap.png?raw=true" width="80%"> </a>
+</p>
+
+
+```{r,echo=FALSE}
+results.75 <- results[results$frac_overlap==0.75,]
+results.75$mse <- (results.75$b - 0.3)^2
+results.75 <- results.75[is.na(results.75$se) == FALSE,]
+
+ave.b <- c(mean(results.75$b[results.75$methodA=="A"]),mean(results.75$b[results.75$methodA=="B"]),mean(results.75$b[results.75$methodA=="C"]),mean(results.75$b[results.75$methodA=="D"]),mean(results.75$b[results.75$methodA=="E"]),mean(results.75$b[results.75$methodA=="F"]),mean(results.75$b[results.75$methodA=="G"]),mean(results.75$b[results.75$methodA=="H"]))
+rmse <- c(sqrt(mean(results.75$mse[results.75$methodA=="A"])),sqrt(mean(results.75$mse[results.75$methodA=="B"])),sqrt(mean(results.75$mse[results.75$methodA=="C"])),sqrt(mean(results.75$mse[results.75$methodA=="D"])),sqrt(mean(results.75$mse[results.75$methodA=="E"])),sqrt(mean(results.75$mse[results.75$methodA=="F"])),sqrt(mean(results.75$mse[results.75$methodA=="G"])),sqrt(mean(results.75$mse[results.75$methodA=="H"])))
+ave.se <- c(mean(results.75$se[results.75$methodA=="A"]),mean(results.75$se[results.75$methodA=="B"]),mean(results.75$se[results.75$methodA=="C"]),mean(results.75$se[results.75$methodA=="D"]),mean(results.75$se[results.75$methodA=="E"]),mean(results.75$se[results.75$methodA=="F"]),mean(results.75$se[results.75$methodA=="G"]),mean(results.75$se[results.75$methodA=="H"]))
+n.IV <- c(mean(results.75$nsnp[results.75$methodA=="A"]),mean(results.75$nsnp[results.75$methodA=="B"]),mean(results.75$nsnp[results.75$methodA=="C"]),mean(results.75$nsnp[results.75$methodA=="D"]),mean(results.75$nsnp[results.75$methodA=="E"]),mean(results.75$nsnp[results.75$methodA=="F"]),mean(results.75$nsnp[results.75$methodA=="G"]),mean(results.75$nsnp[results.75$methodA=="H"]))
+
+ave.sd <- function(x){sqrt((sum((results.75$b[results.75$methodA==x]-mean(results.75$b[results.75$methodA==x]))^2))/sum(results.75$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+
+CP <- function(x){(sum((0.3 < (results.75$b[results.75$methodA==x] + 1.96*results.75$se[results.75$methodA==x])) & (0.3 >(results.75$b[results.75$methodA==x] - 1.96*results.75$se[results.75$methodA==x]))))/sum(results.75$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+
+results.75_summary <- data.frame(method = c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","divw"), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+results.75_summary
+```
+
+[$\star$]{style="color: blue;"} **Comments:**
+
+- The results for 75% overlap simply reinforce all the points we have previously made. We do note however that the average causal effect estimates for `ivw` and `raps` seem to have increased closer to 0.3. However, this seems to be caused by the fact that at greater fractions of overlap, the weak instrument bias is directed towards the observational association. Therefore, when the correlation is 0.5, both `ivw` and `raps` demonstrate some upward bias while for correlation values such as -0.1 and 0.1, the bias is still in the downward direction. 
+
+<br>
+
+[**100% overlap:**]{style="color: purple;"}
+
+```{r, include=FALSE,eval=FALSE}
+results1 <- results[results$frac_overlap==1,]
+
+results1A <- results1[results1$cor_xy==-0.1,]
+results1B <- results1[results1$cor_xy==0.1,]
+results1C <- results1[results1$cor_xy==0.3,]
+results1D <- results1[results1$cor_xy==0.5,]
+
+plotA <- ggplot(results1A, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = -0.1')
+
+
+plotB <- ggplot(results1B, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.1')
+
+
+plotC <- ggplot(results1C, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.3')
+
+
+plotD <- ggplot(results1D, aes(x=method_name, y=b,color=as.factor(method_name))) + geom_boxplot(size=0.7,aes(fill=method_name, color=method_name, alpha=0.2)) + facet_grid(h2~prop_effect, labeller="label_both")+ ylab("Causal Effect") + xlab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  geom_hline(aes(yintercept = 0.3), linetype=1, size=0.5) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8])) +
+  ylim(0.2, 0.4) +
+  guides(color = guide_legend(title = "Method")) +  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),text = element_text(size=12), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=12)) + 
+  ggtitle('cor_xy = 0.5')
+
+figure <- plotA + plotB + plotC + plotD
+figure + plot_layout(guides = "collect") + plot_annotation(tag_levels = 'A') &
+  theme(plot.tag = element_text(face = "bold"))
+
+
+## save as image and include 
+```
+
+
+<p align="center">
+<a href="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_100_overlap.png?raw=true"> 
+<img src="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_100_overlap.png?raw=true" width="80%"> </a>
+</p>
+
+
+```{r,echo=FALSE}
+results1 <- results[results$frac_overlap==1,]
+results1$mse <- (results1$b - 0.3)^2
+results1 <- results1[is.na(results1$se) == FALSE,]
+
+ave.b <- c(mean(results1$b[results1$methodA=="A"]),mean(results1$b[results1$methodA=="B"]),mean(results1$b[results1$methodA=="C"]),mean(results1$b[results1$methodA=="D"]),mean(results1$b[results1$methodA=="E"]),mean(results1$b[results1$methodA=="F"]),mean(results1$b[results1$methodA=="G"]),mean(results1$b[results1$methodA=="H"]))
+rmse <- c(sqrt(mean(results1$mse[results1$methodA=="A"])),sqrt(mean(results1$mse[results1$methodA=="B"])),sqrt(mean(results1$mse[results1$methodA=="C"])),sqrt(mean(results1$mse[results1$methodA=="D"])),sqrt(mean(results1$mse[results1$methodA=="E"])),sqrt(mean(results1$mse[results1$methodA=="F"])),sqrt(mean(results1$mse[results1$methodA=="G"])),sqrt(mean(results1$mse[results1$methodA=="H"])))
+ave.se <- c(mean(results1$se[results1$methodA=="A"]),mean(results1$se[results1$methodA=="B"]),mean(results1$se[results1$methodA=="C"]),mean(results1$se[results1$methodA=="D"]),mean(results1$se[results1$methodA=="E"]),mean(results1$se[results1$methodA=="F"]),mean(results1$se[results1$methodA=="G"]),mean(results1$se[results1$methodA=="H"]))
+n.IV <- c(mean(results1$nsnp[results1$methodA=="A"]),mean(results1$nsnp[results1$methodA=="B"]),mean(results1$nsnp[results1$methodA=="C"]),mean(results1$nsnp[results1$methodA=="D"]),mean(results1$nsnp[results1$methodA=="E"]),mean(results1$nsnp[results1$methodA=="F"]),mean(results1$nsnp[results1$methodA=="G"]),mean(results1$nsnp[results1$methodA=="H"]))
+
+ave.sd <- function(x){sqrt((sum((results1$b[results1$methodA==x]-mean(results1$b[results1$methodA==x]))^2))/sum(results1$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+
+CP <- function(x){(sum((0.3 < (results1$b[results1$methodA==x] + 1.96*results1$se[results1$methodA==x])) & (0.3 >(results1$b[results1$methodA==x] - 1.96*results1$se[results1$methodA==x]))))/sum(results1$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+
+results1_summary <- data.frame(method = c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","divw"), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+results1_summary
+```
+
+```{r, include=FALSE,eval=FALSE}
+results <- read.table("C:/Users/GenDataSci025/Downloads/MRSimSS_res_test.txt",header=TRUE)
+
+results$method_name <- rep(c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","divw"),length(results)/8)
+results$method_name <- factor(results$method_name, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","divw"))
+results$methodA <- rep(c("A","B","C","D","E","F","G","H"),length(results)/8)
+results1 <- results[results$frac_overlap==1,]
+results1$mse <- (results1$b - 0.3)^2
+
+
+results1A <- results1[results1$cor_xy==-0.1,]
+results1B <- results1[results1$cor_xy==0.1,]
+results1C <- results1[results1$cor_xy==0.3,]
+results1D <- results1[results1$cor_xy==0.5,]
+
+
+ave.b <- c(mean(results1A$b[results1A$methodA=="A"]),mean(results1A$b[results1A$methodA=="B"]),mean(results1A$b[results1A$methodA=="C"]),mean(results1A$b[results1A$methodA=="D"]),mean(results1A$b[results1A$methodA=="E"]),mean(results1A$b[results1A$methodA=="F"]),mean(results1A$b[results1A$methodA=="G"]),mean(results1A$b[results1A$methodA=="H"]))
+rmse <- c(sqrt(mean(results1A$mse[results1A$methodA=="A"])),sqrt(mean(results1A$mse[results1A$methodA=="B"])),sqrt(mean(results1A$mse[results1A$methodA=="C"])),sqrt(mean(results1A$mse[results1A$methodA=="D"])),sqrt(mean(results1A$mse[results1A$methodA=="E"])),sqrt(mean(results1A$mse[results1A$methodA=="F"])),sqrt(mean(results1A$mse[results1A$methodA=="G"])),sqrt(mean(results1A$mse[results1A$methodA=="H"])))
+ave.se <- c(mean(results1A$se[results1A$methodA=="A"]),mean(results1A$se[results1A$methodA=="B"]),mean(results1A$se[results1A$methodA=="C"]),mean(results1A$se[results1A$methodA=="D"]),mean(results1A$se[results1A$methodA=="E"]),mean(results1A$se[results1A$methodA=="F"]),mean(results1A$se[results1A$methodA=="G"]),mean(results1A$se[results1A$methodA=="H"]))
+n.IV <- c(mean(results1A$nsnp[results1A$methodA=="A"]),mean(results1A$nsnp[results1A$methodA=="B"]),mean(results1A$nsnp[results1A$methodA=="C"]),mean(results1A$nsnp[results1A$methodA=="D"]),mean(results1A$nsnp[results1A$methodA=="E"]),mean(results1A$nsnp[results1A$methodA=="F"]),mean(results1A$nsnp[results1A$methodA=="G"]),mean(results1A$nsnp[results1A$methodA=="H"]))
+ave.sd <- function(x){sqrt((sum((results1A$b[results1A$methodA==x]-mean(results1A$b[results1A$methodA==x]))^2))/sum(results1A$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+CP <- function(x){(sum((0.3 < (results1A$b[results1A$methodA==x] + 1.96*results1A$se[results1A$methodA==x])) & (0.3 >(results1A$b[results1A$methodA==x] - 1.96*results1A$se[results1A$methodA==x]))))/sum(results1A$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+results1A_summary <- data.frame(method = c(results1A$method[1:8]), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+
+
+ave.b <- c(mean(results1B$b[results1B$methodA=="A"]),mean(results1B$b[results1B$methodA=="B"]),mean(results1B$b[results1B$methodA=="C"]),mean(results1B$b[results1B$methodA=="D"]),mean(results1B$b[results1B$methodA=="E"]),mean(results1B$b[results1B$methodA=="F"]),mean(results1B$b[results1B$methodA=="G"]),mean(results1B$b[results1B$methodA=="H"]))
+rmse <- c(sqrt(mean(results1B$mse[results1B$methodA=="A"])),sqrt(mean(results1B$mse[results1B$methodA=="B"])),sqrt(mean(results1B$mse[results1B$methodA=="C"])),sqrt(mean(results1B$mse[results1B$methodA=="D"])),sqrt(mean(results1B$mse[results1B$methodA=="E"])),sqrt(mean(results1B$mse[results1B$methodA=="F"])),sqrt(mean(results1B$mse[results1B$methodA=="G"])),sqrt(mean(results1B$mse[results1B$methodA=="H"])))
+ave.se <- c(mean(results1B$se[results1B$methodA=="A"]),mean(results1B$se[results1B$methodA=="B"]),mean(results1B$se[results1B$methodA=="C"]),mean(results1B$se[results1B$methodA=="D"]),mean(results1B$se[results1B$methodA=="E"]),mean(results1B$se[results1B$methodA=="F"]),mean(results1B$se[results1B$methodA=="G"]),mean(results1B$se[results1B$methodA=="H"]))
+n.IV <- c(mean(results1B$nsnp[results1B$methodA=="A"]),mean(results1B$nsnp[results1B$methodA=="B"]),mean(results1B$nsnp[results1B$methodA=="C"]),mean(results1B$nsnp[results1B$methodA=="D"]),mean(results1B$nsnp[results1B$methodA=="E"]),mean(results1B$nsnp[results1B$methodA=="F"]),mean(results1B$nsnp[results1B$methodA=="G"]),mean(results1B$nsnp[results1B$methodA=="H"]))
+ave.sd <- function(x){sqrt((sum((results1B$b[results1B$methodA==x]-mean(results1B$b[results1B$methodA==x]))^2))/sum(results1B$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+CP <- function(x){(sum((0.3 < (results1B$b[results1B$methodA==x] + 1.96*results1B$se[results1B$methodA==x])) & (0.3 >(results1B$b[results1B$methodA==x] - 1.96*results1B$se[results1B$methodA==x]))))/sum(results1B$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+results1B_summary <- data.frame(method = c(results1B$method[1:8]), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+
+
+ave.b <- c(mean(results1C$b[results1C$methodA=="A"]),mean(results1C$b[results1C$methodA=="B"]),mean(results1C$b[results1C$methodA=="C"]),mean(results1C$b[results1C$methodA=="D"]),mean(results1C$b[results1C$methodA=="E"]),mean(results1C$b[results1C$methodA=="F"]),mean(results1C$b[results1C$methodA=="G"]),mean(results1C$b[results1C$methodA=="H"]))
+rmse <- c(sqrt(mean(results1C$mse[results1C$methodA=="A"])),sqrt(mean(results1C$mse[results1C$methodA=="B"])),sqrt(mean(results1C$mse[results1C$methodA=="C"])),sqrt(mean(results1C$mse[results1C$methodA=="D"])),sqrt(mean(results1C$mse[results1C$methodA=="E"])),sqrt(mean(results1C$mse[results1C$methodA=="F"])),sqrt(mean(results1C$mse[results1C$methodA=="G"])),sqrt(mean(results1C$mse[results1C$methodA=="H"])))
+ave.se <- c(mean(results1C$se[results1C$methodA=="A"]),mean(results1C$se[results1C$methodA=="B"]),mean(results1C$se[results1C$methodA=="C"]),mean(results1C$se[results1C$methodA=="D"]),mean(results1C$se[results1C$methodA=="E"]),mean(results1C$se[results1C$methodA=="F"]),mean(results1C$se[results1C$methodA=="G"]),mean(results1C$se[results1C$methodA=="H"]))
+n.IV <- c(mean(results1C$nsnp[results1C$methodA=="A"]),mean(results1C$nsnp[results1C$methodA=="B"]),mean(results1C$nsnp[results1C$methodA=="C"]),mean(results1C$nsnp[results1C$methodA=="D"]),mean(results1C$nsnp[results1C$methodA=="E"]),mean(results1C$nsnp[results1C$methodA=="F"]),mean(results1C$nsnp[results1C$methodA=="G"]),mean(results1C$nsnp[results1C$methodA=="H"]))
+ave.sd <- function(x){sqrt((sum((results1C$b[results1C$methodA==x]-mean(results1C$b[results1C$methodA==x]))^2))/sum(results1C$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+CP <- function(x){(sum((0.3 < (results1C$b[results1C$methodA==x] + 1.96*results1C$se[results1C$methodA==x])) & (0.3 >(results1C$b[results1C$methodA==x] - 1.96*results1C$se[results1C$methodA==x]))))/sum(results1C$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+results1C_summary <- data.frame(method = c(results1C$method[1:8]), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+
+ave.b <- c(mean(results1D$b[results1D$methodA=="A"]),mean(results1D$b[results1D$methodA=="B"]),mean(results1D$b[results1D$methodA=="C"]),mean(results1D$b[results1D$methodA=="D"]),mean(results1D$b[results1D$methodA=="E"]),mean(results1D$b[results1D$methodA=="F"]),mean(results1D$b[results1D$methodA=="G"]),mean(results1D$b[results1D$methodA=="H"]))
+rmse <- c(sqrt(mean(results1D$mse[results1D$methodA=="A"])),sqrt(mean(results1D$mse[results1D$methodA=="B"])),sqrt(mean(results1D$mse[results1D$methodA=="C"])),sqrt(mean(results1D$mse[results1D$methodA=="D"])),sqrt(mean(results1D$mse[results1D$methodA=="E"])),sqrt(mean(results1D$mse[results1D$methodA=="F"])),sqrt(mean(results1D$mse[results1D$methodA=="G"])),sqrt(mean(results1D$mse[results1D$methodA=="H"])))
+ave.se <- c(mean(results1D$se[results1D$methodA=="A"]),mean(results1D$se[results1D$methodA=="B"]),mean(results1D$se[results1D$methodA=="C"]),mean(results1D$se[results1D$methodA=="D"]),mean(results1D$se[results1D$methodA=="E"]),mean(results1D$se[results1D$methodA=="F"]),mean(results1D$se[results1D$methodA=="G"]),mean(results1D$se[results1D$methodA=="H"]))
+n.IV <- c(mean(results1D$nsnp[results1D$methodA=="A"]),mean(results1D$nsnp[results1D$methodA=="B"]),mean(results1D$nsnp[results1D$methodA=="C"]),mean(results1D$nsnp[results1D$methodA=="D"]),mean(results1D$nsnp[results1D$methodA=="E"]),mean(results1D$nsnp[results1D$methodA=="F"]),mean(results1D$nsnp[results1D$methodA=="G"]),mean(results1D$nsnp[results1D$methodA=="H"]))
+ave.sd <- function(x){sqrt((sum((results1D$b[results1D$methodA==x]-mean(results1D$b[results1D$methodA==x]))^2))/sum(results1D$methodA==x))}
+monte.sd <- c(ave.sd("A"),ave.sd("B"),ave.sd("C"),ave.sd("D"),ave.sd("E"),ave.sd("F"),ave.sd("G"),ave.sd("H"))
+CP <- function(x){(sum((0.3 < (results1D$b[results1D$methodA==x] + 1.96*results1D$se[results1D$methodA==x])) & (0.3 >(results1D$b[results1D$methodA==x] - 1.96*results1D$se[results1D$methodA==x]))))/sum(results1D$methodA==x)}
+CP.res <- c(CP("A"),CP("B"),CP("C"),CP("D"),CP("E"),CP("F"),CP("G"),CP("H"))
+results1D_summary <- data.frame(method = c(results1D$method[1:8]), ave.b=ave.b, rmse=rmse, sd = monte.sd, ave.se = ave.se, CP = CP.res, n.IVs = n.IV)
+
+results1A_summary
+results1B_summary
+results1C_summary
+results1D_summary
+
+print(results_height_2)
+```
+
+
+[$\star$]{style="color: blue;"} **Comments:**
+
+- Finally, we look at the situation in which there is full sample overlap. This is potentially the instance where our proposed method, **MRSimSS** will be the most useful and beneficial for researchers. The form of our method which is best designed to deal with full overlap is **`SimSS3_raps`**. From the results and the plots above, we can see clearly that it seems to be the least biased and that it has the lowest RMSE and standard deviation values as well as the greatest coverage probability, close to 95%. This will provide researchers with the confidence that by using `SimSS3_raps` with their fully overlapping sample, their causal effect estimate should be void of *Winner's Curse* bias **as well as** weak instrument bias acting in the direction of the observational association. 
+
+
+<br>
+
+
+## Same-trait analyses 
+
+We now have a look at comparing our proposed approach, **MRSimSS**, to other methods using real data. We will adopt a similar strategy to that detailed in  [*"Breaking the Winner's Curse in Mendelian Randomization: Rerandomized Inverse Variance Weighted Estimator"*](https://arxiv.org/pdf/2302.10470v1.pdf) and [*"Incorporating discovery and replication GWAS into summary data Mendelian randomization studies: A review of current methods and a simple, general and powerful alternative"*](https://www.biorxiv.org/content/10.1101/2023.01.12.523708v2.full.pdf), namely **same-trait analyses**. The idea here is that we will use these MR methods to estimate the causal effect of body mass index (BMI) on itself and the causal effect of height on itself, with the knowledge that the true causal effect is 1, in both instances.
+
+In our previous paper, [*"Review and further developments in statistical corrections for Winner’s Curse in genetic association studies"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546), we performed two *independent* GWAS for both BMI and height using UK Biobank data sets and PLINK 2.0. Thus, in the BMI-BMI analysis, we use summary statistics from the first UKBB BMI GWAS [sample size 166,286] and summary statistics from the second UKBB BMI GWAS [sample size 166,332], denoted by BMI-1 and BMI-2, respectively. Similarly, in the height-height analysis, we use summary statistics from the first UKBB height GWAS [sample size 166,250] and summary statistics from the second UKBB BMI GWAS [sample size 166,687], denoted by Height-1 and Height-2, respectively.
+
+[$\star$]{style="color: blue;"} **Note:** Further information regarding how these GWASs were orchestrated and the summary statistics were obtained can be found in [*"Review and further developments in statistical corrections for Winner’s Curse in genetic association studies"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546), with the code available at [https://github.com/amandaforde/winnerscurseGWAS](https://github.com/amandaforde/winnerscurseGWAS).
+
+
+The above GWASs resulted in the availability of summary statistics for 7,915,560 SNPs. Thus, our next task was to select independent SNPs using the `clump_data()` function from the `twoSampleMR` R package, with R-squared < 0.001 and an extension of 10,000 Kb in the genome. Note that these are the same two parameter values as used by the two papers mentioned above. The code to do so for BMI-1 is as follows, with the same process repeated for BMI-2, Height-1 and Height-2:
+
+```{r, eval=FALSE}
+library(TwoSampleMR)
+data <- read.table("summary_data_bmi_1.txt",header=TRUE)
+data <- data.frame(chr=data$chr,pos=data$pos,rsid=data$rsid, pval=2*(pnorm(abs(data$beta/data$se), lower.tail=FALSE)))
+clumped_SNPs <- ld_clump(dat=data,clump_kb=10000,clump_r2=0.001)$rsid 
+write.csv(clumped_SNPs,"clumped_SNPs_bmi_1.txt")
+```
+
+
+This clumping procedure resulted in sets of 2448, 2471, 2435 and 2360 independent SNPs for BMI-1, BMI-2, Height-1 and Height-2, respectively.
+
+<br>
+
+[**BMI-1-BMI-2:**]{style="color: Purple;"}
+
+We now consider estimating the causal effect of BMI on BMI using BMI-1 as the exposure data set and BMI-2 as the outcome data set. Recall that these two data sets are completely non-overlapping. 
+
+[$\star$]{style="color: blue;"} **Note:** As it is only summary statistics that are available, in this application of `mr_simss()`, we could make use of the `est_lambda()` function and thus, information regarding overlap or correlation between exposure and outcome would not be required. However, as we do know that the data sets are independent, we know that the true value of `lambda.val` should be equal to zero as `lambda.val`$= \frac{N_{\text{overlap}}\rho}{\sqrt{N_X N_Y}}$. Therefore, in the `mr.simss()` function we can simply set `est.lambda=TRUE` and `lambda.val=0`.
+
+The code for estimating the causal effect using these methods is shown below, with a table of results produced. 
+
+
+```{r,echo=FALSE}
+mr_ivw_EB <- function(data, threshold=5e-8){
+  ## obtain adjusted estimate
+  data.exp <- data.frame(rsid=data$SNP,beta=data$beta.exposure,se=data$se.exposure)
+  data.exp.EB <- empirical_bayes(data.exp)
+  data <- dplyr::arrange(data,dplyr::desc(abs(data$beta.exposure/data$se.exposure)))
+  data$beta.exposure.EB <- data.exp.EB$beta_EB
+  ## subset data set
+  data_sig <- data[2*(pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < threshold,]
+  if(nrow(data_sig) < 3){return(NULL)}else{
+    ivw.res <- summary(stats::lm(data_sig$beta.outcome ~ -1 + data_sig$beta.exposure.EB, weights = 1/data_sig$se.outcome^2))
+    b <- ivw.res$coef[1,1]
+    se <- ivw.res$coef[1,2]/min(1,ivw.res$sigma)
+    pval <- 2 * stats::pnorm(abs(b/se), lower.tail=FALSE)
+    return(data.frame(method="mr_ivw_EB", nsnp=nrow(data_sig), b=b, se=se, pval=pval))
+  }
+}
+
+
+
+## IVW
+mr.ivw <- function(data, threshold=5e-8){
+  ## subset data set
+  data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < threshold)
+  if(nrow(data_sig) < 3){return(NULL)}else{
+    ivw.res <- summary(stats::lm(data_sig$beta.outcome ~ -1 + data_sig$beta.exposure, weights = 1/data_sig$se.outcome^2))
+    b <- ivw.res$coef[1,1]
+    se <- ivw.res$coef[1,2]/min(1,ivw.res$sigma)
+    pval <- 2 * stats::pnorm(abs(b/se), lower.tail=FALSE)
+    return(data.frame(method="mr_ivw", nsnp=nrow(data_sig), b=b, se=se, pval=pval))
+  }
+}
+
+## IVW Bootstrap
+mr_ivw_boot <- function(data, threshold=5e-8){
+  ## obtain adjusted estimate
+  data.exp <- data.frame(rsid=data$SNP,beta=data$beta.exposure,se=data$se.exposure)
+  data.exp.boot <- BR_ss(data.exp)
+  data <- dplyr::arrange(data,dplyr::desc(abs(data$beta.exposure/data$se.exposure)))
+  data$beta.exposure.boot <- data.exp.boot$beta_BR_ss
+  ## subset data set
+  data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < threshold)
+  if(nrow(data_sig) < 3){return(NULL)}else{
+    ivw.res <- summary(stats::lm(data_sig$beta.outcome ~ -1 + data_sig$beta.exposure.boot, weights = 1/data_sig$se.outcome^2))
+    b <- ivw.res$coef[1,1]
+    se <- ivw.res$coef[1,2]/min(1,ivw.res$sigma)
+    pval <- 2 * stats::pnorm(abs(b/se), lower.tail=FALSE)
+    return(data.frame(method="mr_ivw_boot", nsnp=nrow(data_sig), b=b, se=se, pval=pval))
+  }
+}
+
+```
+
+
+```{r}
+set.seed(1996)
+
+clumped_SNPs <- read.csv("clumped_SNPs_bmi_1.txt",header=TRUE)
+summary_data_bmi_1 <- read.table("C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_bmi_1.txt",header=TRUE)
+clumped_bmi_1 <- summary_data_bmi_1[summary_data_bmi_1$rsid %in% clumped_SNPs$x,]
+summary_data_bmi_2 <-  read.table('C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_bmi_2.txt',header=TRUE)
+clumped_bmi_2 <- summary_data_bmi_2[summary_data_bmi_2$rsid %in% clumped_SNPs$x,]
+
+## real data
+data <- data.frame(SNP=clumped_bmi_1$rsid,beta.exposure=clumped_bmi_1$beta,beta.outcome=clumped_bmi_2$beta,se.exposure=clumped_bmi_1$se,se.outcome=clumped_bmi_2$se)
+
+## MRSimSS-2-IVW
+res.sim.2.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-2-RAPS
+res.sim.2.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_raps",parallel=TRUE)$summary
+## MRSimSS-3-IVW
+res.sim.3.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-3-RAPS
+res.sim.3.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_raps",parallel=TRUE)$summary
+## IVW
+res.ivw <- mr.ivw(data)
+## MR-RAPS
+data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < 5e-8)
+res.raps <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+res.raps <- data.frame(method="mr_raps", nsnp=nrow(data_sig), b=res.raps$beta.hat, se=res.raps$beta.se, pval=res.raps$beta.p.value)
+## IVW-EB
+res.ivw.EB <- mr_ivw_EB(data)
+## IVW-boot
+res.ivw.boot <- mr_ivw_boot(data)
+## dIVW
+res.divw <- mr.divw::mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+res.divw <- data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE)))
+## compile results
+results_bmi_1 <- list(res.sim.2.ivw, res.sim.2.raps, res.sim.3.ivw, res.sim.3.raps, res.ivw, res.raps, res.ivw.EB, res.ivw.boot,res.divw)
+
+total_res <- data.frame(method=c(rep("0",9)))
+total_res$method <- c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw")
+snp <- function(i){results_bmi_1[[i]]$nsnp}
+b <- function(i){results_bmi_1[[i]]$b}
+se <- function(i){results_bmi_1[[i]]$se}
+total_res$b <- c(b(1),b(2),b(3),b(4),b(5),b(6),b(7),b(8),b(9))
+total_res$se <- c(se(1),se(2),se(3),se(4),se(5),se(6),se(7),se(8),se(9))
+total_res$CI.lower <- total_res$b - 1.96*total_res$se
+total_res$CI.upper <- total_res$b + 1.96*total_res$se
+total_res$n.IV <- c(snp(1),snp(2),snp(3),snp(4),snp(5),snp(6),snp(7),snp(8),snp(9))
+
+results_bmi_1_clump <- total_res
+results_bmi_1_clump
+```
+
+
+<br>
+
+[**BMI-2-BMI-1:**]{style="color: Purple;"}
+
+Using the same set of MR methods, the causal effect of BMI on BMI is estimated again using BMI-2 as the exposure data set and BMI-1 as the outcome data set. 
+
+```{r,  echo=FALSE}
+set.seed(1996)
+
+clumped_SNPs <- read.csv("clumped_SNPs_bmi_2.txt",header=TRUE)
+summary_data_bmi_1 <- read.table("C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_bmi_1.txt",header=TRUE)
+clumped_bmi_1 <- summary_data_bmi_1[summary_data_bmi_1$rsid %in% clumped_SNPs$x,]
+summary_data_bmi_2 <-  read.table('C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_bmi_2.txt',header=TRUE)
+clumped_bmi_2 <- summary_data_bmi_2[summary_data_bmi_2$rsid %in% clumped_SNPs$x,]
+
+## real data
+data <- data.frame(SNP=clumped_bmi_2$rsid,beta.exposure=clumped_bmi_2$beta,beta.outcome=clumped_bmi_1$beta,se.exposure=clumped_bmi_2$se,se.outcome=clumped_bmi_1$se)
+
+## MRSimSS-2-IVW
+res.sim.2.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-2-RAPS
+res.sim.2.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_raps",parallel=TRUE)$summary
+## MRSimSS-3-IVW
+res.sim.3.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-3-RAPS
+res.sim.3.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_raps",parallel=TRUE)$summary
+## IVW
+res.ivw <- mr_ivw(data)
+## MR-RAPS
+data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < 5e-8)
+res.raps <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+res.raps <- data.frame(method="mr_raps", nsnp=nrow(data_sig), b=res.raps$beta.hat, se=res.raps$beta.se, pval=res.raps$beta.p.value)
+## IVW-EB
+res.ivw.EB <- mr_ivw_EB(data)
+## IVW-boot
+res.ivw.boot <- mr_ivw_boot(data)
+## dIVW
+res.divw <- mr.divw::mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+res.divw <- data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE)))
+## compile results
+results_bmi_2 <- list(res.sim.2.ivw, res.sim.2.raps, res.sim.3.ivw, res.sim.3.raps, res.ivw, res.raps, res.ivw.EB, res.ivw.boot,res.divw)
+
+total_res <- data.frame(method=c(rep("0",9)))
+total_res$method <- c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw")
+snp <- function(i){results_bmi_2[[i]]$nsnp}
+b <- function(i){results_bmi_2[[i]]$b}
+se <- function(i){results_bmi_2[[i]]$se}
+total_res$b <- c(b(1),b(2),b(3),b(4),b(5),b(6),b(7),b(8),b(9))
+total_res$se <- c(se(1),se(2),se(3),se(4),se(5),se(6),se(7),se(8),se(9))
+total_res$CI.lower <- total_res$b - 1.96*total_res$se
+total_res$CI.upper <- total_res$b + 1.96*total_res$se
+total_res$n.IV <- c(snp(1),snp(2),snp(3),snp(4),snp(5),snp(6),snp(7),snp(8),snp(9))
+
+results_bmi_2_clump <- total_res
+results_bmi_2_clump
+```
+
+
+<br>
+
+[**Height-1-Height-2:**]{style="color: Purple;"}
+
+Here, the causal effect of height on itself is estimated by using Height-1 as the exposure data set and Height-2 as the outcome data set.
+
+```{r,  echo=FALSE}
+set.seed(1996)
+
+clumped_SNPs <- read.csv("clumped_SNPs_height_1.txt",header=TRUE)
+summary_data_height_1 <- read.table("C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_height_1.txt",header=TRUE)
+clumped_height_1 <- summary_data_height_1[summary_data_height_1$rsid %in% clumped_SNPs$x,]
+summary_data_height_2 <-  read.table('C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_height_2.txt',header=TRUE)
+clumped_height_2 <- summary_data_height_2[summary_data_height_2$rsid %in% clumped_SNPs$x,]
+
+## real data
+data <- data.frame(SNP=clumped_height_1$rsid,beta.exposure=clumped_height_1$beta,beta.outcome=clumped_height_2$beta,se.exposure=clumped_height_1$se,se.outcome=clumped_height_2$se)
+
+## MRSimSS-2-IVW
+res.sim.2.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-2-RAPS
+res.sim.2.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_raps",parallel=TRUE)$summary
+## MRSimSS-3-IVW
+res.sim.3.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-3-RAPS
+res.sim.3.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_raps",parallel=TRUE)$summary
+## IVW
+res.ivw <- mr_ivw(data)
+## MR-RAPS
+data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < 5e-8)
+res.raps <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+res.raps <- data.frame(method="mr_raps", nsnp=nrow(data_sig), b=res.raps$beta.hat, se=res.raps$beta.se, pval=res.raps$beta.p.value)
+## IVW-EB
+res.ivw.EB <- mr_ivw_EB(data)
+## IVW-boot
+res.ivw.boot <- mr_ivw_boot(data)
+## dIVW
+res.divw <- mr.divw::mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+res.divw <- data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE)))
+## compile results
+results_height_1 <- list(res.sim.2.ivw, res.sim.2.raps, res.sim.3.ivw, res.sim.3.raps, res.ivw, res.raps, res.ivw.EB, res.ivw.boot,res.divw)
+
+total_res <- data.frame(method=c(rep("0",9)))
+total_res$method <- c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw")
+snp <- function(i){results_height_1[[i]]$nsnp}
+b <- function(i){results_height_1[[i]]$b}
+se <- function(i){results_height_1[[i]]$se}
+total_res$b <- c(b(1),b(2),b(3),b(4),b(5),b(6),b(7),b(8),b(9))
+total_res$se <- c(se(1),se(2),se(3),se(4),se(5),se(6),se(7),se(8),se(9))
+total_res$CI.lower <- total_res$b - 1.96*total_res$se
+total_res$CI.upper <- total_res$b + 1.96*total_res$se
+total_res$n.IV <- c(snp(1),snp(2),snp(3),snp(4),snp(5),snp(6),snp(7),snp(8),snp(9))
+results_height_1_clump <- total_res
+results_height_1_clump
+```
+
+
+<br>
+
+[**Height-2-Height-1:**]{style="color: Purple;"}
+
+Lastly, the causal effect of height on itself is estimated again, using Height-2 as the exposure data set and Height-1 as the outcome data set. 
+
+```{r, echo=FALSE}
+set.seed(1996)
+
+clumped_SNPs <- read.csv("clumped_SNPs_height_2.txt",header=TRUE)
+summary_data_height_1 <- read.table("C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_height_1.txt",header=TRUE)
+clumped_height_1 <- summary_data_height_1[summary_data_height_1$rsid %in% clumped_SNPs$x,]
+summary_data_height_2 <-  read.table('C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_height_2.txt',header=TRUE)
+clumped_height_2 <- summary_data_height_2[summary_data_height_2$rsid %in% clumped_SNPs$x,]
+
+## real data
+data <- data.frame(SNP=clumped_height_2$rsid,beta.exposure=clumped_height_2$beta,beta.outcome=clumped_height_1$beta,se.exposure=clumped_height_2$se,se.outcome=clumped_height_1$se)
+
+## MRSimSS-2-IVW
+res.sim.2.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-2-RAPS
+res.sim.2.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_raps",parallel=TRUE)$summary
+## MRSimSS-3-IVW
+res.sim.3.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-3-RAPS
+res.sim.3.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_raps",parallel=TRUE)$summary
+## IVW
+res.ivw <- mr_ivw(data)
+## MR-RAPS
+data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < 5e-8)
+res.raps <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+res.raps <- data.frame(method="mr_raps", nsnp=nrow(data_sig), b=res.raps$beta.hat, se=res.raps$beta.se, pval=res.raps$beta.p.value)
+## IVW-EB
+res.ivw.EB <- mr_ivw_EB(data)
+## IVW-boot
+res.ivw.boot <- mr_ivw_boot(data)
+## dIVW
+res.divw <- mr.divw::mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+res.divw <- data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE)))
+## compile results
+results_height_2 <- list(res.sim.2.ivw, res.sim.2.raps, res.sim.3.ivw, res.sim.3.raps, res.ivw, res.raps, res.ivw.EB, res.ivw.boot,res.divw)
+
+total_res <- data.frame(method=c(rep("0",9)))
+total_res$method <- c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw")
+snp <- function(i){results_height_2[[i]]$nsnp}
+b <- function(i){results_height_2[[i]]$b}
+se <- function(i){results_height_2[[i]]$se}
+total_res$b <- c(b(1),b(2),b(3),b(4),b(5),b(6),b(7),b(8),b(9))
+total_res$se <- c(se(1),se(2),se(3),se(4),se(5),se(6),se(7),se(8),se(9))
+total_res$CI.lower <- total_res$b - 1.96*total_res$se
+total_res$CI.upper <- total_res$b + 1.96*total_res$se
+total_res$n.IV <- c(snp(1),snp(2),snp(3),snp(4),snp(5),snp(6),snp(7),snp(8),snp(9))
+
+results_height_2_clump <- total_res
+results_height_2_clump
+```
 
 
 
 
+<br>
+
+We can depict a summary of the above results for each scenario as follows.
 
 
+```{r, eval=FALSE,echo=FALSE}
+library(ggplot2)
+library(RColorBrewer)
+col <- brewer.pal(8,"Dark2")
+col1 <- brewer.pal(11,"RdYlBu")
+
+results_bmi_1_clump$method <- factor(results_bmi_1_clump$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+results_bmi_2_clump$method <- factor(results_bmi_2_clump$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+results_height_1_clump$method <- factor(results_height_1_clump$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+results_height_2_clump$method <- factor(results_height_2_clump$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+
+plot_A <- ggplot(results_bmi_1_clump, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method))) + geom_point(size=2,aes(fill=method, color=method)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  geom_errorbarh(height=.2)+
+  geom_vline(aes(xintercept = 1), linetype=1, size=0.5,linetype="dashed") + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  guides(color = guide_legend(title = "Method")) +  theme(text = element_text(size=8), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('BMI-1-BMI-2')
+  
+plot_B<- ggplot(results_bmi_2_clump, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method))) + geom_point(size=2,aes(fill=method, color=method)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  geom_errorbarh(height=.2)+
+  geom_vline(aes(xintercept = 1), linetype=1, size=0.5,linetype="dashed") + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  guides(color = guide_legend(title = "Method")) +  theme(text = element_text(size=8), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('BMI-2-BMI-1')
+  
+plot_C <- ggplot(results_height_1_clump, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method))) + geom_point(size=2,aes(fill=method, color=method)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  geom_errorbarh(height=.2)+
+  geom_vline(aes(xintercept = 1), linetype=1, size=0.5,linetype="dashed") + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  guides(color = guide_legend(title = "Method")) +  theme(text = element_text(size=8), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('Height-1-Height-2')
+
+plot_D <- ggplot(results_height_2_clump, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method))) + geom_point(size=2,aes(fill=method, color=method)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  geom_errorbarh(height=.2)+
+  geom_vline(aes(xintercept = 1), linetype=1, size=0.5,linetype="dashed") + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  guides(color = guide_legend(title = "Method")) +  theme(text = element_text(size=8), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('Height-2-Height-1')
+
+figure <- plot_A + plot_B + plot_C + plot_D
+
+```
+
+```{r,eval=FALSE,echo=FALSE}
+figure + plot_layout(guides = "collect") + plot_annotation(tag_levels = 'A') &
+  theme(plot.tag = element_text(face = "bold"))
+
+```
+
+
+<p align="center">
+<a href="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_real_data.png?raw=true"> 
+<img src="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_real_data.png?raw=true" width="100%"> </a>
+</p>
+
+
+<br>
+
+[**Comments:**]{style="color: purple;"} 
+
+- ***Question:*** *Why is dIVW performing so poorly in comparison with the other methods?*
+
+- It it is known that the presence of *Winner's Curse* in the exposure estimates will lead to a deflation in the causal effect estimate while weak instrument bias also results in a bias towards the null in this instance of non-overlapping samples. Interestingly, it can be seen that, apart from dIVW, the naive IVW method is the most biased towards the null. This is quite likely due to the fact that both of these aforementioned biases are affecting its estimate. MR-RAPS aims to alleviate weak instrument bias. However, the presence of *Winner's Curse* is clear here for the RAPS estimate as its 95% confidence interval lies below 1 for each scenario. 
+
+- Both IVW-EB and IVW-boot aim to correct for *Winner's Curse* by using adjusted exposure effect sizes in the IVW method. It seems that this plug-in process seems to be working to some degree as IVW-EB and IVW-boot estimates are consistently closer to 1 than their IVW counterparts. 
+
+- In the case of MR-SimSS, it is true that as it is known that there is no overlap between the two data sets in each case, then it is perhaps better to focus on the 2-split version, as there is no real need for 3 splits. As expected in this case, weak instrument bias is increased in `SimSS3_ivw` compared with `SimSS2_ivw`, due to the smaller simulated sample sizes for the exposure and outcome data sets. Indeed, it can be seen that in most cases `SimSS3_raps` has larger standard error than `SimSS2_raps`. That said, the estimates are still very similar between these two approaches. It is very encouraging to see that **in all instances MR-SimSS, using RAPS, produces the least biased estimate**. Furthermore, in 3 out of 4 cases, its 95% confidence interval includes the true causal effect of 1.
+
+- However, given all of this, some evidence of bias still persists as we can see that `SimSS2_raps` and `SimSS3_raps` still tend to underestimate slightly. We hypothesise that this could potentially be due to the nature of clumping as it retains the most strongly associated SNPs in each region based on their $p$-values. This is referenced in the article [*"Breaking the Winner’s Curse in Mendelian Randomization:
+Rerandomized Inverse Variance Weighted Estimator"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546) in which they mention that "...standard clumping, which is based on p-value
+comparisons, introduces a different type of selection bias..." and explore alternative forms of clumping. This leads us to investigate if using a pruned, rather than clumped, set of SNPs, will improve the causal effect estimates of our method. However, in order to accurately compare, we will need to obtain a set of pruned SNPs which have a similar number of significant SNPs to the clumped sets above. 
+
+
+<br>
+
+
+### Using pruned SNPs
+
+Due to the possible issue with clumping mentioned above, we now have a look at the performance of our methods with respect to pruned data sets. Similar to above, we investigate estimating the causal effect of both BMI on itself and height on itself. To do so, we will first use a pruned set of SNPs similar to that which was obtained in [*"Review and further developments in statistical corrections for Winner’s Curse in genetic association studies"*](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010546). In the supplementary file for this article, it is stated that "PLINK 2.0 (4) was used to prune the original set of SNPs. The command ‘--indep-pairwise 50 5 0.5’ was employed for pruning. This meant that
+pruning occurred by first calculating LD between each pair of SNPs in a window of 50 SNPs. If an LD value greater than 0.5 was observed, then one SNP out of this pair was removed. The window was shifted 5 SNPs forward and the process was repeated. 1,589,295 SNPs remained after this procedure, a data set about 20% of the size of the original." 
+
+However, in order to fairly compare our results when using clumped SNPs vs pruned SNPs, it is desirable that we obtain a pruned set of SNPs with a *roughly* similar number of significant SNPs, as mentioned above. Using the 1,589,295 SNPs obtained with `--indep-pairwise 50 5 0.5` provides 439, 465, 5859 and 5994 independent significant SNPs for BMI-1, BMI-2, Height-1 and Height-2, respectively. These figures are clearly much larger than those above and therefore, we will adjust the `--indep-pairwise` parameters for each trait in order to give more similar numbers of significant SNPs. 
+
+For BMI, using `--indep-pairwise 100 10 0.001` provides a set of 46,566 independent SNPs which gives 83 and 86 significant SNPs for BMI-1 and BMI-2, respectively. 
+
+For height, using `--indep-pairwise 175 10 0.001` provides a set of 26,869 independent SNPs which gives 379 and 362 significant SNPs for Height-1 and Height-2, respectively. 
+
+
+[**BMI-1-BMI-2:**]{style="color: Purple;"}
+
+Similar to the clumped scenario, we first consider estimating the causal effect of BMI on BMI using BMI-1 as the exposure data set and BMI-2 as the outcome data set. The code for doing so is very similar to that included above. 
+
+```{r, echo=FALSE}
+set.seed(1996)
+
+pruned_SNPs <- read.table('C:/Users/GenDataSci025/Downloads/pruned_SNPs_height_001_100.txt',header=TRUE)
+
+summary_data_bmi_1 <-  read.table('C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_bmi_1.txt',header=TRUE)
+pruned_bmi_1 <- summary_data_bmi_1[summary_data_bmi_1$rsid %in% pruned_SNPs$V1,]
+
+summary_data_bmi_2 <-  read.table('C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_bmi_2.txt',header=TRUE)
+pruned_bmi_2 <- summary_data_bmi_2[summary_data_bmi_2$rsid %in% pruned_SNPs$V1,]
+
+## real data
+data <- data.frame(SNP=pruned_bmi_1$rsid,beta.exposure=pruned_bmi_1$beta,beta.outcome=pruned_bmi_2$beta,se.exposure=pruned_bmi_1$se,se.outcome=pruned_bmi_2$se)
+
+## MRSimSS-2-IVW
+res.sim.2.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-2-RAPS
+res.sim.2.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_raps",parallel=TRUE)$summary
+## MRSimSS-3-IVW
+res.sim.3.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-3-RAPS
+res.sim.3.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_raps",parallel=TRUE)$summary
+## IVW
+res.ivw <- mr.ivw(data)
+## MR-RAPS
+data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < 5e-8)
+res.raps <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+res.raps <- data.frame(method="mr_raps", nsnp=nrow(data_sig), b=res.raps$beta.hat, se=res.raps$beta.se, pval=res.raps$beta.p.value)
+## IVW-EB
+res.ivw.EB <- mr_ivw_EB(data)
+## IVW-boot
+res.ivw.boot <- mr_ivw_boot(data)
+## dIVW
+res.divw <- mr.divw::mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+res.divw <- data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE)))
+## compile results
+results_bmi_1 <- list(res.sim.2.ivw, res.sim.2.raps, res.sim.3.ivw, res.sim.3.raps, res.ivw, res.raps, res.ivw.EB, res.ivw.boot,res.divw)
+
+total_res <- data.frame(method=c(rep("0",9)))
+total_res$method <- c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw")
+snp <- function(i){results_bmi_1[[i]]$nsnp}
+b <- function(i){results_bmi_1[[i]]$b}
+se <- function(i){results_bmi_1[[i]]$se}
+total_res$b <- c(b(1),b(2),b(3),b(4),b(5),b(6),b(7),b(8),b(9))
+total_res$se <- c(se(1),se(2),se(3),se(4),se(5),se(6),se(7),se(8),se(9))
+total_res$CI.lower <- total_res$b - 1.96*total_res$se
+total_res$CI.upper <- total_res$b + 1.96*total_res$se
+total_res$n.IV <- c(snp(1),snp(2),snp(3),snp(4),snp(5),snp(6),snp(7),snp(8),snp(9))
+
+results_bmi_1_prune <- total_res
+results_bmi_1_prune
+```
+
+
+<br>
+
+[**BMI-2-BMI-1:**]{style="color: Purple;"}
+
+Using the same set of MR methods, the causal effect of BMI on BMI is estimated again using BMI-2 as the exposure data set and BMI-1 as the outcome data set. 
+
+```{r,  echo=FALSE}
+set.seed(1996)
+
+## real data
+data <- data.frame(SNP=pruned_bmi_2$rsid,beta.exposure=pruned_bmi_2$beta,beta.outcome=pruned_bmi_1$beta,se.exposure=pruned_bmi_2$se,se.outcome=pruned_bmi_1$se)
+
+## MRSimSS-2-IVW
+res.sim.2.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-2-RAPS
+res.sim.2.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_raps",parallel=TRUE)$summary
+## MRSimSS-3-IVW
+res.sim.3.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-3-RAPS
+res.sim.3.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_raps",parallel=TRUE)$summary
+## IVW
+res.ivw <- mr.ivw(data)
+## MR-RAPS
+data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < 5e-8)
+res.raps <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+res.raps <- data.frame(method="mr_raps", nsnp=nrow(data_sig), b=res.raps$beta.hat, se=res.raps$beta.se, pval=res.raps$beta.p.value)
+## IVW-EB
+res.ivw.EB <- mr_ivw_EB(data)
+## IVW-boot
+res.ivw.boot <- mr_ivw_boot(data)
+## dIVW
+res.divw <- mr.divw::mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+res.divw <- data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE)))
+## compile results
+results_bmi_2 <- list(res.sim.2.ivw, res.sim.2.raps, res.sim.3.ivw, res.sim.3.raps, res.ivw, res.raps, res.ivw.EB, res.ivw.boot,res.divw)
+
+total_res <- data.frame(method=c(rep("0",9)))
+total_res$method <- c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw")
+snp <- function(i){results_bmi_2[[i]]$nsnp}
+b <- function(i){results_bmi_2[[i]]$b}
+se <- function(i){results_bmi_2[[i]]$se}
+total_res$b <- c(b(1),b(2),b(3),b(4),b(5),b(6),b(7),b(8),b(9))
+total_res$se <- c(se(1),se(2),se(3),se(4),se(5),se(6),se(7),se(8),se(9))
+total_res$CI.lower <- total_res$b - 1.96*total_res$se
+total_res$CI.upper <- total_res$b + 1.96*total_res$se
+total_res$n.IV <- c(snp(1),snp(2),snp(3),snp(4),snp(5),snp(6),snp(7),snp(8),snp(9))
+
+results_bmi_2_prune <- total_res
+results_bmi_2_prune
+```
+
+
+<br>
+
+[**Height-1-Height-2:**]{style="color: Purple;"}
+
+Here, the causal effect of height on itself is estimated by using Height-1 as the exposure data set and Height-2 as the outcome data set.
+
+```{r,  echo=FALSE}
+set.seed(1996)
+
+pruned_SNPs <- read.table('C:/Users/GenDataSci025/Downloads/pruned_SNPs_height_001_175.txt',header=TRUE)
+
+summary_data_height_1 <-  read.table('C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_height_1.txt',header=TRUE)
+pruned_height_1 <- summary_data_height_1[summary_data_height_1$rsid %in% pruned_SNPs$V1,]
+
+summary_data_height_2 <-  read.table('C:/Users/GenDataSci025/winnerscurse_realdata/data/summary_data_height_2.txt',header=TRUE)
+pruned_height_2 <- summary_data_height_2[summary_data_height_2$rsid %in% pruned_SNPs$V1,]
+
+
+## real data
+data <- data.frame(SNP=pruned_height_1$rsid,beta.exposure=pruned_height_1$beta,beta.outcome=pruned_height_2$beta,se.exposure=pruned_height_1$se,se.outcome=pruned_height_2$se)
+
+## MRSimSS-2-IVW
+res.sim.2.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-2-RAPS
+res.sim.2.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_raps",parallel=TRUE)$summary
+## MRSimSS-3-IVW
+res.sim.3.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-3-RAPS
+res.sim.3.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_raps",parallel=TRUE)$summary
+## IVW
+res.ivw <- mr.ivw(data)
+## MR-RAPS
+data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < 5e-8)
+res.raps <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+res.raps <- data.frame(method="mr_raps", nsnp=nrow(data_sig), b=res.raps$beta.hat, se=res.raps$beta.se, pval=res.raps$beta.p.value)
+## IVW-EB
+res.ivw.EB <- mr_ivw_EB(data)
+## IVW-boot
+res.ivw.boot <- mr_ivw_boot(data)
+## dIVW
+res.divw <- mr.divw::mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+res.divw <- data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE)))
+## compile results
+results_height_1 <- list(res.sim.2.ivw, res.sim.2.raps, res.sim.3.ivw, res.sim.3.raps, res.ivw, res.raps, res.ivw.EB, res.ivw.boot,res.divw)
+
+total_res <- data.frame(method=c(rep("0",9)))
+total_res$method <- c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw")
+snp <- function(i){results_height_1[[i]]$nsnp}
+b <- function(i){results_height_1[[i]]$b}
+se <- function(i){results_height_1[[i]]$se}
+total_res$b <- c(b(1),b(2),b(3),b(4),b(5),b(6),b(7),b(8),b(9))
+total_res$se <- c(se(1),se(2),se(3),se(4),se(5),se(6),se(7),se(8),se(9))
+total_res$CI.lower <- total_res$b - 1.96*total_res$se
+total_res$CI.upper <- total_res$b + 1.96*total_res$se
+total_res$n.IV <- c(snp(1),snp(2),snp(3),snp(4),snp(5),snp(6),snp(7),snp(8),snp(9))
+results_height_1_prune <- total_res
+results_height_1_prune
+```
+
+
+
+<br>
+
+[**Height-2-Height-1:**]{style="color: Purple;"}
+
+Lastly, the causal effect of height on itself is estimated again, using Height-2 as the exposure data set and Height-1 as the outcome data set. 
+
+
+```{r, echo=FALSE}
+set.seed(1996)
+
+## real data
+data <- data.frame(SNP=pruned_height_2$rsid,beta.exposure=pruned_height_2$beta,beta.outcome=pruned_height_1$beta,se.exposure=pruned_height_2$se,se.outcome=pruned_height_1$se)
+
+## MRSimSS-2-IVW
+res.sim.2.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-2-RAPS
+res.sim.2.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=2,mr_method = "mr_raps",parallel=TRUE)$summary
+## MRSimSS-3-IVW
+res.sim.3.ivw <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_ivw",parallel=TRUE)$summary
+## MRSimSS-3-RAPS
+res.sim.3.raps <- mr.simss::mr_simss(data,subset=TRUE,sub.cut=0.05,est.lambda=TRUE,lambda.val=0,n.iter=1000,splits=3,mr_method = "mr_raps",parallel=TRUE)$summary
+## IVW
+res.ivw <- mr.ivw(data)
+## MR-RAPS
+data_sig <- data %>% dplyr::filter(2*(stats::pnorm(abs(data$beta.exposure/data$se.exposure), lower.tail=FALSE)) < 5e-8)
+res.raps <- mr.raps::mr.raps(data_sig$beta.exposure,data_sig$beta.outcome,data_sig$se.exposure,data_sig$se.outcome)
+res.raps <- data.frame(method="mr_raps", nsnp=nrow(data_sig), b=res.raps$beta.hat, se=res.raps$beta.se, pval=res.raps$beta.p.value)
+## IVW-EB
+res.ivw.EB <- mr_ivw_EB(data)
+## IVW-boot
+res.ivw.boot <- mr_ivw_boot(data)
+## dIVW
+res.divw <- mr.divw::mr.divw(data$beta.exposure, data$beta.outcome, data$se.exposure, data$se.outcome, diagnostics=FALSE)
+res.divw <- data.frame(method="mr_divw", nsnp=res.divw$n.IV, b=res.divw$beta.hat, se=res.divw$beta.se, pval=2*(stats::pnorm(abs(res.divw$beta.hat/res.divw$beta.se), lower.tail=FALSE)))
+## compile results
+results_height_2 <- list(res.sim.2.ivw, res.sim.2.raps, res.sim.3.ivw, res.sim.3.raps, res.ivw, res.raps, res.ivw.EB, res.ivw.boot,res.divw)
+
+total_res <- data.frame(method=c(rep("0",9)))
+total_res$method <- c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw")
+snp <- function(i){results_height_2[[i]]$nsnp}
+b <- function(i){results_height_2[[i]]$b}
+se <- function(i){results_height_2[[i]]$se}
+total_res$b <- c(b(1),b(2),b(3),b(4),b(5),b(6),b(7),b(8),b(9))
+total_res$se <- c(se(1),se(2),se(3),se(4),se(5),se(6),se(7),se(8),se(9))
+total_res$CI.lower <- total_res$b - 1.96*total_res$se
+total_res$CI.upper <- total_res$b + 1.96*total_res$se
+total_res$n.IV <- c(snp(1),snp(2),snp(3),snp(4),snp(5),snp(6),snp(7),snp(8),snp(9))
+
+results_height_2_prune <- total_res
+results_height_2_prune
+```
+
+
+<br>
+
+
+```{r, eval=FALSE,echo=FALSE}
+library(ggplot2)
+library(RColorBrewer)
+col <- brewer.pal(8,"Dark2")
+col1 <- brewer.pal(11,"RdYlBu")
+
+results_bmi_1_prune$method <- factor(results_bmi_1_prune$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+results_bmi_2_prune$method <- factor(results_bmi_2_prune$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+results_height_1_prune$method <- factor(results_height_1_prune$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+results_height_2_prune$method <- factor(results_height_2_prune$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+
+plot_A <- ggplot(results_bmi_1_prune, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method))) + geom_point(size=2,aes(fill=method, color=method)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  geom_errorbarh(height=.2)+
+  geom_vline(aes(xintercept = 1), linetype=1, size=0.5,linetype="dashed") + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  guides(color = guide_legend(title = "Method")) +  theme(text = element_text(size=8), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('BMI-1-BMI-2')
+  
+plot_B<- ggplot(results_bmi_2_prune, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method))) + geom_point(size=2,aes(fill=method, color=method)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  geom_errorbarh(height=.2)+
+  geom_vline(aes(xintercept = 1), linetype=1, size=0.5,linetype="dashed") + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  guides(color = guide_legend(title = "Method")) +  theme(text = element_text(size=8), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('BMI-2-BMI-1')
+  
+plot_C <- ggplot(results_height_1_prune, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method))) + geom_point(size=2,aes(fill=method, color=method)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  geom_errorbarh(height=.2)+
+  geom_vline(aes(xintercept = 1), linetype=1, size=0.5,linetype="dashed") + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  guides(color = guide_legend(title = "Method")) +  theme(text = element_text(size=8), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('Height-1-Height-2')
+
+plot_D <- ggplot(results_height_2_prune, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method))) + geom_point(size=2,aes(fill=method, color=method)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  geom_errorbarh(height=.2)+
+  geom_vline(aes(xintercept = 1), linetype=1, size=0.5,linetype="dashed") + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) +
+  guides(color = guide_legend(title = "Method")) +  theme(text = element_text(size=8), legend.position="none",strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('Height-2-Height-1')
+
+figure <- plot_A + plot_B + plot_C + plot_D
+
+```
+
+
+```{r,eval=FALSE,echo=FALSE}
+figure + plot_layout(guides = "collect") + plot_annotation(tag_levels = 'A') &
+  theme(plot.tag = element_text(face = "bold"))
+
+```
+
+
+```{r, eval=FALSE,echo=FALSE}
+
+results_bmi_1_clump$set <- c(rep("clump",9))
+results_bmi_2_clump$set <- c(rep("clump",9))
+results_height_1_clump$set <- c(rep("clump",9))
+results_height_2_clump$set <- c(rep("clump",9))
+
+results_bmi_1_prune$set <- c(rep("prune",9))
+results_bmi_2_prune$set <- c(rep("prune",9))
+results_height_1_prune$set <- c(rep("prune",9))
+results_height_2_prune$set <- c(rep("prune",9))
+
+results_bmi1_cp <- rbind(results_bmi_1_clump,results_bmi_1_prune)
+results_bmi2_cp <- rbind(results_bmi_2_clump,results_bmi_2_prune)
+results_height1_cp <- rbind(results_height_1_clump,results_height_1_prune)
+results_height2_cp <- rbind(results_height_2_clump,results_height_2_prune)
+
+results_bmi1_cp$method <- factor(results_bmi1_cp$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+results_bmi2_cp$method <- factor(results_bmi2_cp$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+results_height1_cp$method <- factor(results_height1_cp$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+results_height2_cp$method <- factor(results_height2_cp$method, levels=c("SimSS2_ivw","SimSS2_raps","SimSS3_ivw","SimSS3_raps","ivw","raps","ivw_EB","ivw_boot","divw"))
+
+
+plot_A <- ggplot(results_bmi1_cp, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method),group=set)) + geom_point(size=2,aes(fill=method, color=method,shape=set),position=position_dodge(width = 0.5)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) + scale_shape_manual(values=c(19,1)) + geom_errorbarh(height=.3,position=position_dodge(width = 0.5),aes(linetype=set)) + scale_linetype_manual(values = c("dotted", "solid")) +
+  geom_vline(aes(xintercept = 1), size=0.5,linetype=1) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) + theme(text = element_text(size=8),strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('BMI-1-BMI-2') + guides(color = FALSE, fill = FALSE, group = TRUE) +
+  theme(legend.title=element_blank())
+  
+plot_B<- ggplot(results_bmi2_cp, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method),group=set)) + geom_point(size=2,aes(fill=method, color=method,shape=set),position=position_dodge(width = 0.5)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) + scale_shape_manual(values=c(19,1)) + geom_errorbarh(height=.3,position=position_dodge(width = 0.5),aes(linetype=set)) + scale_linetype_manual(values = c("dotted", "solid")) +
+  geom_vline(aes(xintercept = 1), size=0.5,linetype=1) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) + theme(text = element_text(size=8),strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('BMI-2-BMI-1') + guides(color = FALSE, fill = FALSE, group = TRUE) +
+  theme(legend.title=element_blank())
+  
+plot_C <- ggplot(results_height1_cp, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method),group=set)) + geom_point(size=2,aes(fill=method, color=method,shape=set),position=position_dodge(width = 0.5)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) + scale_shape_manual(values=c(19,1)) + geom_errorbarh(height=.3,position=position_dodge(width = 0.5),aes(linetype=set)) + scale_linetype_manual(values = c("dotted", "solid")) +
+  geom_vline(aes(xintercept = 1), size=0.5,linetype=1) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) + theme(text = element_text(size=8),strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('Height-1-Height-2') + guides(color = FALSE, fill = FALSE, group = TRUE) +
+  theme(legend.title=element_blank())
+
+plot_D <- ggplot(results_height2_cp, aes(y=method, x=b, xmin=CI.lower, xmax=CI.upper,color=as.factor(method),group=set)) + geom_point(size=2,aes(fill=method, color=method,shape=set),position=position_dodge(width = 0.5)) + xlab("Estimated Causal Effect") + ylab("Method") + scale_color_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) + scale_shape_manual(values=c(19,1)) + geom_errorbarh(height=.3,position=position_dodge(width = 0.5),aes(linetype=set)) + scale_linetype_manual(values = c("dotted", "solid")) +
+  geom_vline(aes(xintercept = 1), size=0.5,linetype=1) + scale_fill_manual(values=c(col[1],col[2],col[3],col[4],col[5],col[6],col[7],col[8],col1[1])) + theme(text = element_text(size=8),strip.text = element_text(face="italic"), plot.title = element_text(size=10)) + 
+  ggtitle('Height-2-Height-1') + guides(color = FALSE, fill = FALSE, group = TRUE) +
+  theme(legend.title=element_blank())
+
+figure <- plot_A + plot_B + plot_C + plot_D
+
+```
+
+
+```{r,eval=FALSE,echo=FALSE}
+figure + plot_layout(guides = "collect") + plot_annotation(tag_levels = 'A') &
+  theme(plot.tag = element_text(face = "bold"))
+
+```
+
+
+We can now combine the results obtained by using both clumped and pruned sets of SNPs and visualise in one plot as follows. Note that the *solid points with dotted error bars* represent causal effect estimates obtained using **clumped** sets of SNPs while the *hollow circles with solid error bars* represent those obtained using **pruned** sets of SNPs.
+
+
+<p align="center">
+<a href="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_clump_prune.png?raw=true"> 
+<img src="https://github.com/amandaforde/winnerscurse_MR/blob/main/res_plots/MRSimSS_clump_prune.png?raw=true" width="100%"> </a>
+</p>
+
+
+<br>
+
+[**Comments:**]{style="color: purple;"} 
+
+- Firstly, we see that `divw` has greatly improved in comparison with using the clumped set of SNPs. As `divw` uses the entire set of SNPs and not just those that are significant, this observation is most likely due to the fact that the number of SNPs in the entire set of pruned SNPs for both BMI and height are approximately 19 and 11 times larger, respectively, than their clumped counterparts. We see that `divw` has smaller standard errors than the other methods. However, in all four scenarios, the true value of 1 is not contained in its 95% confidence interval. 
+
+- Using pruned SNPs seems to show improvements for the *Winner's Curse* corrected variants of `ivw`, `ivw_boot` and `ivw_EB`. This could potentially be due to the fact that both methods use the entire data set, which is now bigger as noted above, to make adjustments to the SNP-exposure estimates. However, we also see that the **causal effect estimates of `ivw` and `raps` have also moved closer to 1** by using the pruned set. As these two methods only use significant SNPs, this result provides *evidence that using clumping induces a form of selection bias* and that bias propagates to the causal effect estimate. 
+
+- Even though using pruned sets has increased the standard error of our `SimSS3_raps` causal effect estimates, especially for BMI, the estimates do now seem to be less biased with all four confidence intervals including 1. The increase in standard error visible for BMI is due to the fact that less instruments are significant on each iteration. Most importantly, for Height-2-Height-1, we see that our causal effect estimates have moved much closer to 1 and in fact, **`SimSS3_raps` and `SimSS2_raps` are the only methods which include 1 in their 95% confidence intervals**. 
+
+<br>
